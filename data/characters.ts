@@ -2,23 +2,28 @@ export type Character = {
   id: string;
   name: string;
   initial: string;
+  image: string;
   occupation: string;
   tagline: string;
   tags: string[];
   accent: string;
+  isOnline: boolean;
   greeting: string;
   replies: string[];
 };
 
+// 角色数据集中维护首页介绍、开场白和毛坯版 Mock 回复，便于后续统一迭代人设。
 export const characters: Character[] = [
   {
     id: "shen-qingzhou",
     name: "沈清舟",
     initial: "沈",
+    image: "/characters/shen-qingzhou-glasses.png",
     occupation: "独立书店主理人",
     tagline: "你不用急，我会把每一句都听完。",
     tags: ["温润", "治愈", "慢节奏"],
     accent: "#829b8b",
+    isOnline: true,
     greeting: "晚上好。书店刚打烊，现在很安静。你今天过得怎么样？",
     replies: [
       "听起来，今天并不算轻松。没关系，你可以慢一点说。我在这里。",
@@ -30,10 +35,12 @@ export const characters: Character[] = [
     id: "ji-yu",
     name: "季屿",
     initial: "季",
+    image: "/characters/ji-yu.png",
     occupation: "AI 公司 CTO",
     tagline: "情绪不是故障，只是还没被正确读取。",
     tags: ["理性", "毒舌", "技术派"],
     accent: "#667b98",
+    isOnline: false,
     greeting: "终于上线了。说吧，今天又遇到了什么需要紧急修复的 Bug？",
     replies: [
       "这个问题的根因不在你。别急着给自己提交错误报告，先把事实和情绪分开。",
@@ -45,10 +52,12 @@ export const characters: Character[] = [
     id: "lin-lie",
     name: "林烈",
     initial: "烈",
+    image: "/characters/lin-lie.png",
     occupation: "篮球队长 / 户外博主",
     tagline: "学姐，别一个人扛，我一直都在！",
     tags: ["阳光", "直球", "行动派"],
     accent: "#cf895e",
+    isOnline: true,
     greeting: "学姐！你终于来啦！我刚训练完，第一时间就看手机了！",
     replies: [
       "学姐，这种事怎么能让你一个人扛啊！告诉我，我站你这边！",
@@ -60,10 +69,12 @@ export const characters: Character[] = [
     id: "gu-wenshen",
     name: "顾闻深",
     initial: "顾",
+    image: "/characters/gu-wenshen.png",
     occupation: "私人调香师",
     tagline: "有些情绪，像雨后的雪松，不必命名。",
     tags: ["清冷", "神秘", "诗意"],
     accent: "#877c9b",
+    isOnline: false,
     greeting: "你来了。今晚的空气有一点潮湿，像一封还没有拆开的信。",
     replies: [
       "我听见了。你的情绪像雨落在雪松上，安静，却有很深的回声。",

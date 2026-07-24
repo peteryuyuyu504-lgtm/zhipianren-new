@@ -14,6 +14,7 @@ type TtsChunk = {
 type CharacterVoice = {
   speaker: string;
   speechRate: number;
+  styleInstruction: string;
 };
 
 const CHARACTER_SPEAKERS: Record<
@@ -24,21 +25,26 @@ const CHARACTER_SPEAKERS: Record<
     envName: "BYTEDANCE_TTS_SPEAKER_SHEN_QINGZHOU",
     speaker: "zh_male_ruyayichen_uranus_bigtts",
     speechRate: 0,
+    styleInstruction: "温润、耐心、平静，像认真倾听后给出回应。",
   },
   "ji-yu": {
     envName: "BYTEDANCE_TTS_SPEAKER_JI_YU",
     speaker: "zh_male_m191_uranus_bigtts",
     speechRate: 0,
+    styleInstruction: "理性、简洁、克制，语气清醒，偶尔带一点不伤人的冷幽默。",
   },
   "lin-lie": {
     envName: "BYTEDANCE_TTS_SPEAKER_LIN_LIE",
     speaker: "zh_male_shaonianzixin_uranus_bigtts",
     speechRate: 0,
+    styleInstruction: "阳光、直接、有活力，像刚结束运动的年轻男生。",
   },
   "gu-wenshen": {
     envName: "BYTEDANCE_TTS_SPEAKER_GU_WENSHEN",
-    speaker: "zh_male_liufei_uranus_bigtts",
-    speechRate: -25,
+    speaker: "zh_male_ruyayichen_uranus_bigtts",
+    speechRate: -12,
+    styleInstruction:
+      "成熟清冷、低声克制，带一点神秘和诗意；像私人调香师近距离说话，句间有自然留白，不要播音腔，不要热情外放。",
   },
 };
 
@@ -48,11 +54,13 @@ export function getCharacterVoice(characterId: string): CharacterVoice {
     return {
       speaker: process.env.BYTEDANCE_TTS_SPEAKER?.trim() || DEFAULT_SPEAKER,
       speechRate: 0,
+      styleInstruction: "自然、亲近，像真实聊天。",
     };
   }
   return {
     speaker: process.env[config.envName]?.trim() || config.speaker,
     speechRate: config.speechRate,
+    styleInstruction: config.styleInstruction,
   };
 }
 
@@ -117,7 +125,11 @@ export async function synthesizeSpeech(
   apiKey: string,
   text: string,
   voice: CharacterVoice,
+  performanceInstruction = "",
 ) {
+  const contextInstruction = [voice.styleInstruction, performanceInstruction]
+    .filter(Boolean)
+    .join(" ");
   const response = await fetch(TTS_URL, {
     method: "POST",
     headers: {
@@ -137,6 +149,13 @@ export async function synthesizeSpeech(
           sample_rate: 24_000,
           speech_rate: voice.speechRate,
         },
+        ...(contextInstruction
+          ? {
+              additions: JSON.stringify({
+                context_texts: [contextInstruction],
+              }),
+            }
+          : {}),
       },
     }),
     cache: "no-store",

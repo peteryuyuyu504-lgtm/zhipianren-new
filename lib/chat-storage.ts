@@ -88,9 +88,17 @@ function isToday(createdAt: string) {
   );
 }
 
+function isDeliveredMedia(
+  message: ChatMessage,
+  type: ChatMessage["type"],
+) {
+  if (message.sender !== "character" || message.type !== type) return false;
+  return type !== "image" || message.imageStatus === "completed";
+}
+
 function roundsSinceType(messages: ChatMessage[], type: ChatMessage["type"]) {
   const lastMediaIndex = messages.findLastIndex(
-    (message) => message.sender === "character" && message.type === type,
+    (message) => isDeliveredMedia(message, type),
   );
   if (lastMediaIndex < 0) return 10_000;
   return messages
@@ -107,8 +115,7 @@ export function getBalancedMediaState(
     completedRounds: sessionStats.completedRounds,
     dailyImageCount: allCharacterMessages.filter(
       (message) =>
-        message.sender === "character" &&
-        message.type === "image" &&
+        isDeliveredMedia(message, "image") &&
         isToday(message.createdAt),
     ).length,
     dailyVoiceCount: allCharacterMessages.filter(

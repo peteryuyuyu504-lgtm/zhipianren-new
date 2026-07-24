@@ -2,7 +2,7 @@ import type { Character } from "@/data/characters";
 import type { MediaState } from "@/lib/chat-types";
 
 export const BALANCED_MEDIA_LIMITS = {
-  dailyImages: 2,
+  dailyImages: 3,
   dailyAutomaticVoices: 5,
   imageCooldownRounds: 8,
   voiceCooldownRounds: 4,
@@ -11,7 +11,7 @@ export const BALANCED_MEDIA_LIMITS = {
 } as const;
 
 const EXPLICIT_IMAGE_PATTERN =
-  /(你在干嘛|你在做什么|你在哪里|你在哪儿|想看看你|看看你|看看周围|看看那边|发.{0,4}(照片|图片|自拍)|给我看看)/i;
+  /(你在干嘛|你在做什么|你在哪里|你在哪儿|想看(?:看)?你|看(?:看)?你|看看周围|看看那边|给我看看|让我看(?:一下|看)?|发(?:一|个|张|一张|个张)?(?:照|照片|相片|图片|图|自拍)(?:片)?|发.{0,4}(?:照片|相片|图片|自拍)|拍(?:一|个|张|一张)?(?:照|照片|相片|图片|图|自拍)(?:片)?|来(?:一|个|张|一张)?(?:照|照片|相片|图片|图|自拍)(?:片)?)/i;
 const EXPLICIT_VOICE_PATTERN = /(语音|声音|说给我听|读给我听|想听.*说|听听你)/i;
 const EMOTIONAL_VOICE_PATTERN =
   /(难过|伤心|焦虑|失眠|睡不着|好累|害怕|安慰我|哄哄我|晚安|给我加油)/i;
@@ -77,10 +77,15 @@ const CHARACTER_SCENES: Record<string, string> = {
     "清冷雅致的私人调香工作室，香材、玻璃香水瓶、雪松与雨夜窗景",
 };
 
+export function getCharacterScene(character: Character) {
+  return CHARACTER_SCENES[character.id] ?? "自然、有生活感的室内环境";
+}
+
 export function createCharacterScenePrompt(
   character: Character,
   userMessage: string,
+  companionReply: string,
 ) {
-  const scene = CHARACTER_SCENES[character.id] ?? "自然、有生活感的室内环境";
-  return `以参考图中的同一位男性角色为唯一主角，严格保持他的脸型、五官、发型、年龄感和整体气质一致。角色是${character.name}，职业是${character.occupation}，性格为${character.tags.join("、")}。场景：${scene}。结合当前对话“${userMessage.slice(0, 180)}”，表现他此刻正在做的自然动作。真实生活抓拍感，人物穿着得体，画面克制、有氛围，不出现文字、水印、其他主要人物或不安全内容。`;
+  const scene = getCharacterScene(character);
+  return `以参考图中的同一位男性角色为唯一主角，严格保持他的脸型、五官、发型、年龄感和整体气质一致。角色是${character.name}，职业是${character.occupation}，性格为${character.tags.join("、")}。统一场景：${scene}。用户当前消息：“${userMessage.slice(0, 180)}”。角色随图回复：“${companionReply.slice(0, 240)}”。照片必须与这段回复在地点、时间、穿着、人物状态和正在做的动作上保持一致；如回复与统一场景有冲突，以统一场景为准。表现角色正在自然地用手机给用户分享此刻的生活照片。真实生活抓拍感，人物穿着得体，画面克制、有氛围，不出现文字、水印、其他主要人物或不安全内容。`;
 }

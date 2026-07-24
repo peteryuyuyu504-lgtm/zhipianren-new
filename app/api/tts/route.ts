@@ -4,6 +4,7 @@ import {
   getCharacterVoice,
   synthesizeSpeech,
 } from "@/lib/bytedance-tts";
+import { prepareTextForSpeech } from "@/lib/voice-text";
 
 const MAX_TTS_TEXT_LENGTH = 500;
 
@@ -32,6 +33,10 @@ export async function POST(request: Request) {
   if (text.length > MAX_TTS_TEXT_LENGTH) {
     return NextResponse.json({ error: "语音文本过长" }, { status: 400 });
   }
+  const preparedSpeech = prepareTextForSpeech(text);
+  if (!preparedSpeech.text) {
+    return NextResponse.json({ error: "语音文本没有可朗读内容" }, { status: 400 });
+  }
 
   const apiKey = process.env.BYTEDANCE_TTS_API_KEY?.trim();
   if (!apiKey) {
@@ -44,8 +49,9 @@ export async function POST(request: Request) {
   try {
     const audio = await synthesizeSpeech(
       apiKey,
-      text,
+      preparedSpeech.text,
       getCharacterVoice(character.id),
+      preparedSpeech.performanceInstruction,
     );
     return new Response(new Uint8Array(audio), {
       headers: {

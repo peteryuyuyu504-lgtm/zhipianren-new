@@ -7,6 +7,7 @@ import { submitCharacterSceneImage } from "@/lib/apimart-images";
 import {
   createCharacterScenePrompt,
   decideBalancedMedia,
+  getCharacterScene,
 } from "@/lib/media-policy";
 
 const MAX_HISTORY_ITEMS = 12;
@@ -84,9 +85,12 @@ export async function POST(request: Request) {
     state: body.mediaState,
   });
   const wantsVoice = mediaDecision.voice;
+  const imageScene = mediaDecision.image
+    ? getCharacterScene(activeCharacter)
+    : undefined;
   const apiKey = process.env.OPENROUTER_API_KEY?.trim();
 
-  async function createImageTask() {
+  async function createImageTask(companionReply: string) {
     if (!mediaDecision.image) return undefined;
     const imageApiKey =
       process.env.APIMART_IMAGE_TO_IMAGE_API_KEY?.trim() ||
@@ -97,7 +101,7 @@ export async function POST(request: Request) {
       const task = await submitCharacterSceneImage(
         imageApiKey,
         activeCharacter,
-        createCharacterScenePrompt(activeCharacter, message),
+        createCharacterScenePrompt(activeCharacter, message, companionReply),
       );
       return { taskId: task.taskId, kind: "image-to-image" as const };
     } catch (error) {
@@ -118,10 +122,16 @@ export async function POST(request: Request) {
   }
 
   if (!apiKey) {
+    const imageTask = await createImageTask(reply);
     const response: ChatResponse = {
-      reply: wantsVoice ? `[VOICE]${reply}` : reply,
+      reply:
+        mediaDecision.image && !imageTask
+          ? "刚才那张照片没有发送成功，等一下再让我试试，好吗？"
+          : wantsVoice
+            ? `[VOICE]${reply}`
+            : reply,
       mode: "mock",
-      imageTask: await createImageTask(),
+      imageTask,
     };
     return NextResponse.json(response);
   }
@@ -132,14 +142,38 @@ export async function POST(request: Request) {
       character,
       history,
       message,
+      imageScene,
+      willSendVoice: wantsVoice,
     });
-    const modelRequestedVoice = /^(?:\[VOICE\]\s*)+/i.test(liveReply);
-    const cleanReply = liveReply.replace(/^(?:\[VOICE\]\s*)+/i, "").trim();
+    let cleanReply = liveReply.replace(/^(?:\[VOICE\]\s*)+/i, "").trim();
+    const imageTask = await createImageTask(cleanReply);
+
+    if (mediaDecision.image && imageTask) {
+      const contradictsImage =
+        /(不能|没法|无法|发不了|不能发|没办法).{0,8}(照片|图片|图|自拍)|系统.{0,6}(限制|不允许)/i.test(
+          cleanReply,
+        );
+      if (contradictsImage) {
+        cleanReply = `给你看看我现在的样子。我正在${imageScene}，刚好拍下这一刻发给你。`;
+      }
+    } else if (mediaDecision.image) {
+      cleanReply = "刚才那张照片没有发送成功，等一下再让我试试，好吗？";
+    }
+
+    if (
+      wantsVoice &&
+      /(只能|只可以|只好).{0,8}(文字|打字)|(不能|没法|无法|发不了|不能发|没办法).{0,8}(语音|声音)|下次.{0,8}(语音|声音)|系统.{0,6}(限制|不允许)/i.test(
+        cleanReply,
+      )
+    ) {
+      cleanReply =
+        "那我就直接说给你听。别着急，我在这里陪着你呢。你今天过得怎么样，有没有好好休息？";
+    }
+
     const response: ChatResponse = {
-      reply:
-        wantsVoice || modelRequestedVoice ? `[VOICE]${cleanReply}` : cleanReply,
+      reply: wantsVoice ? `[VOICE]${cleanReply}` : cleanReply,
       mode: "live",
-      imageTask: await createImageTask(),
+      imageTask,
     };
     return NextResponse.json(response);
   } catch (error) {

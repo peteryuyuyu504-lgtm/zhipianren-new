@@ -86,7 +86,9 @@ export async function POST(request: Request) {
     );
   }
 
-  const apiKey = process.env.APIMART_API_KEY?.trim();
+  const apiKey =
+    process.env.APIMART_IMAGE_TO_IMAGE_API_KEY?.trim() ||
+    process.env.APIMART_API_KEY?.trim();
   if (!apiKey) {
     return NextResponse.json(
       { error: "图片服务尚未配置" },
@@ -95,9 +97,10 @@ export async function POST(request: Request) {
   }
 
   try {
-    return NextResponse.json(
-      await submitImageToImage(apiKey, prompt, imageUrl),
-    );
+    return NextResponse.json({
+      ...(await submitImageToImage(apiKey, prompt, imageUrl)),
+      kind: "image-to-image",
+    });
   } catch {
     return NextResponse.json(
       { error: "图片编辑任务提交失败，请稍后重试" },

@@ -1,20 +1,33 @@
 import { NextResponse } from "next/server";
-import { synthesizeSpeech } from "@/lib/bytedance-tts";
+import { getCharacter } from "@/data/characters";
+import {
+  getCharacterVoice,
+  synthesizeSpeech,
+} from "@/lib/bytedance-tts";
 
 const MAX_TTS_TEXT_LENGTH = 500;
 
 export async function POST(request: Request) {
-  let body: { text?: unknown };
+  let body: { text?: unknown; characterId?: unknown };
 
   try {
-    body = (await request.json()) as { text?: unknown };
+    body = (await request.json()) as {
+      text?: unknown;
+      characterId?: unknown;
+    };
   } catch {
     return NextResponse.json({ error: "请求内容不是有效的 JSON" }, { status: 400 });
   }
 
   const text = typeof body.text === "string" ? body.text.trim() : "";
+  const characterId =
+    typeof body.characterId === "string" ? body.characterId.trim() : "";
+  const character = getCharacter(characterId);
   if (!text) {
     return NextResponse.json({ error: "语音文本不能为空" }, { status: 400 });
+  }
+  if (!character) {
+    return NextResponse.json({ error: "语音角色无效" }, { status: 400 });
   }
   if (text.length > MAX_TTS_TEXT_LENGTH) {
     return NextResponse.json({ error: "语音文本过长" }, { status: 400 });
@@ -29,7 +42,11 @@ export async function POST(request: Request) {
   }
 
   try {
-    const audio = await synthesizeSpeech(apiKey, text);
+    const audio = await synthesizeSpeech(
+      apiKey,
+      text,
+      getCharacterVoice(character.id),
+    );
     return new Response(new Uint8Array(audio), {
       headers: {
         "Content-Type": "audio/mpeg",

@@ -11,6 +11,13 @@ type SubmitImageResponse = {
   }>;
 };
 
+type UploadImageResponse = {
+  url?: string;
+  filename?: string;
+};
+
+const referenceImageCache = new Map<string, string>();
+
 export type ImageTaskStatus =
   | "pending"
   | "processing"
@@ -107,6 +114,51 @@ export async function submitImageToImage(
   return { taskId, status: "submitted" as const };
 }
 
+async function uploadCharacterReference(
+  apiKey: string,
+  character: Character,
+) {
+  const cachedUrl = referenceImageCache.get(character.id);
+  if (cachedUrl) return cachedUrl;
+
+  const publicRoot = path.resolve(process.cwd(), "public");
+  const imagePath = path.resolve(
+    publicRoot,
+    character.image.replace(/^[/\\]+/, ""),
+  );
+  if (!imagePath.startsWith(`${publicRoot}${path.sep}`)) {
+    throw new Error("Character image path is invalid");
+  }
+
+  const image = await readFile(imagePath);
+  const formData = new FormData();
+  formData.append(
+    "file",
+    new Blob([new Uint8Array(image)], { type: "image/png" }),
+    path.basename(imagePath),
+  );
+
+  const response = await requestApimart(apiKey, "/v1/uploads/images", {
+    method: "POST",
+    body: formData,
+  });
+  const data = (await response.json()) as UploadImageResponse;
+  const url = data.url?.trim();
+  if (!url) throw new Error("APIMart did not return an uploaded image URL");
+
+  referenceImageCache.set(character.id, url);
+  return url;
+}
+
+export async function submitCharacterSceneImage(
+  apiKey: string,
+  character: Character,
+  prompt: string,
+) {
+  const referenceUrl = await uploadCharacterReference(apiKey, character);
+  return submitImageToImage(apiKey, prompt, referenceUrl);
+}
+
 export async function getImageTask(apiKey: string, taskId: string) {
   const response = await requestApimart(
     apiKey,
@@ -134,3 +186,6 @@ export async function getImageTask(apiKey: string, taskId: string) {
     images: task.status === "completed" ? images : [],
   };
 }
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import type { Character } from "@/data/characters";

@@ -4,7 +4,7 @@ import { sharedModelRules } from "@/lib/chat-policy";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 const DEFAULT_MODEL = "xiaomi/mimo-v2.5";
-const REQUEST_TIMEOUT_MS = 30_000;
+const REQUEST_TIMEOUT_MS = 25_000;
 
 type OpenRouterMessage = {
   role: "system" | "user" | "assistant";
@@ -71,31 +71,45 @@ export async function requestOpenRouterReply({
   history: ChatHistoryItem[];
   message: string;
 }) {
-  const response = await fetch(OPENROUTER_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: process.env.OPENROUTER_MODEL?.trim() || DEFAULT_MODEL,
-      messages: toOpenRouterMessages(character, history, message),
-      reasoning: { enabled: true },
-    }),
-    cache: "no-store",
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-  });
+  const messages = toOpenRouterMessages(character, history, message);
 
-  if (!response.ok) {
-    throw new Error(`OpenRouter request failed with status ${response.status}`);
+  for (const reasoningEnabled of [true, false]) {
+    try {
+      const response = await fetch(OPENROUTER_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: process.env.OPENROUTER_MODEL?.trim() || DEFAULT_MODEL,
+          messages,
+          reasoning: { enabled: reasoningEnabled },
+        }),
+        cache: "no-store",
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      });
+
+      if (!response.ok) {
+        const canRetry =
+          reasoningEnabled && (response.status === 429 || response.status >= 500);
+        if (canRetry) continue;
+        throw new Error(
+          `OpenRouter request failed with status ${response.status}`,
+        );
+      }
+
+      const data = (await response.json()) as OpenRouterResponse;
+      const reply = data.choices?.[0]?.message?.content?.trim();
+      if (reply) return reply;
+    } catch (error) {
+      const isTimeout =
+        error instanceof Error &&
+        (error.name === "TimeoutError" || /timeout/i.test(error.message));
+      if (reasoningEnabled && isTimeout) continue;
+      throw error;
+    }
   }
 
-  const data = (await response.json()) as OpenRouterResponse;
-  const reply = data.choices?.[0]?.message?.content?.trim();
-
-  if (!reply) {
-    throw new Error("OpenRouter returned an empty reply");
-  }
-
-  return reply;
+  throw new Error("OpenRouter returned an empty reply after retry");
 }

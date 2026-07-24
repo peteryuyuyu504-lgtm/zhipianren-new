@@ -20,7 +20,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "图片描述过长" }, { status: 400 });
   }
 
-  const apiKey = process.env.APIMART_API_KEY?.trim();
+  const apiKey =
+    process.env.APIMART_TEXT_TO_IMAGE_API_KEY?.trim() ||
+    process.env.APIMART_API_KEY?.trim();
   if (!apiKey) {
     return NextResponse.json(
       { error: "图片服务尚未配置" },
@@ -29,7 +31,10 @@ export async function POST(request: Request) {
   }
 
   try {
-    return NextResponse.json(await submitTextToImage(apiKey, prompt));
+    return NextResponse.json({
+      ...(await submitTextToImage(apiKey, prompt)),
+      kind: "text-to-image",
+    });
   } catch {
     return NextResponse.json(
       { error: "图片任务提交失败，请稍后重试" },

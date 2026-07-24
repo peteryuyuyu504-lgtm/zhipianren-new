@@ -2,10 +2,18 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import {
+  FormEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import type { Character } from "@/data/characters";
 import type { ChatMessage, ChatMessageType, ChatResponse } from "@/lib/chat-types";
 import {
+  getBalancedMediaState,
   getChatSessionStats,
   getChatStorageKey,
   parseStoredMessages,
@@ -85,7 +93,14 @@ function getReturnHint(lastCompletedAt: string | null) {
   return `上次聊天是${relativeTime}`;
 }
 
-function VoiceMessageCard({ text }: { text: string }) {
+function VoiceMessageCard({
+  text,
+  characterId,
+}: {
+  text: string;
+  characterId: string;
+}) {
+  const spokenText = text.replace(/^(?:\[VOICE\]\s*)+/i, "").trim();
   const [audioUrl, setAudioUrl] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -106,7 +121,7 @@ function VoiceMessageCard({ text }: { text: string }) {
       const response = await fetch("/api/tts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text: spokenText, characterId }),
       });
       if (!response.ok) throw new Error("TTS request failed");
 
@@ -136,8 +151,96 @@ function VoiceMessageCard({ text }: { text: string }) {
           {isLoading ? "正在生成语音…" : "点击播放"}
         </button>
       )}
-      <p>{text}</p>
+      <p>{spokenText}</p>
       {error && <p className="voice-error">{error}</p>}
+    </div>
+  );
+}
+
+function ImageMessageCard({
+  message,
+  onUpdate,
+}: {
+  message: ChatMessage;
+  onUpdate: (
+    id: string,
+    update: Pick<ChatMessage, "imageStatus" | "imageUrl">,
+  ) => void;
+}) {
+  useEffect(() => {
+    if (message.imageStatus !== "processing" || !message.imageTaskId) return;
+    let cancelled = false;
+    let timer = 0;
+    let attempts = 0;
+
+    async function poll() {
+      if (cancelled || !message.imageTaskId) return;
+      attempts += 1;
+      try {
+        const response = await fetch(
+          `/api/images/tasks/${encodeURIComponent(message.imageTaskId)}?kind=image-to-image`,
+          { cache: "no-store" },
+        );
+        if (!response.ok) throw new Error("Image task query failed");
+        const data = (await response.json()) as {
+          status?: string;
+          images?: Array<{ url?: string }>;
+        };
+        const imageUrl = data.images?.[0]?.url;
+
+        if (data.status === "completed" && imageUrl) {
+          onUpdate(message.id, {
+            imageStatus: "completed",
+            imageUrl,
+          });
+          return;
+        }
+        if (data.status === "failed" || data.status === "cancelled") {
+          onUpdate(message.id, {
+            imageStatus: "failed",
+            imageUrl: undefined,
+          });
+          return;
+        }
+      } catch {
+        if (attempts >= 40) {
+          onUpdate(message.id, {
+            imageStatus: "failed",
+            imageUrl: undefined,
+          });
+          return;
+        }
+      }
+
+      if (!cancelled) timer = window.setTimeout(poll, 3_000);
+    }
+
+    void poll();
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [message.id, message.imageStatus, message.imageTaskId, onUpdate]);
+
+  return (
+    <div className="character-image-card">
+      {message.imageStatus === "completed" && message.imageUrl ? (
+        <Image
+          src={message.imageUrl}
+          alt={message.text}
+          width={720}
+          height={720}
+          unoptimized
+        />
+      ) : message.imageStatus === "failed" ? (
+        <p>照片暂时没有生成成功，不会重复扣除新的生成次数。</p>
+      ) : (
+        <div className="image-generating" role="status">
+          <span />
+          <p>正在准备一张生活照…</p>
+        </div>
+      )}
+      <small>{message.text}</small>
     </div>
   );
 }
@@ -155,6 +258,20 @@ export default function ChatRoom({ character }: { character: Character }) {
 
   // 每位角色使用独立键名，避免不同角色的本地聊天记录混在一起。
   const storageKey = getChatStorageKey(character.id);
+
+  const updateImageMessage = useCallback(
+    (
+      id: string,
+      update: Pick<ChatMessage, "imageStatus" | "imageUrl">,
+    ) => {
+      setMessages((current) =>
+        current.map((message) =>
+          message.id === id ? { ...message, ...update } : message,
+        ),
+      );
+    },
+    [],
+  );
 
   // 首次进入时安全读取本地历史，损坏数据会回退到只有开场白的记录。
   useEffect(() => {
@@ -208,17 +325,32 @@ export default function ChatRoom({ character }: { character: Character }) {
     setReplyError("");
 
     try {
+      const allCharacterMessages: ChatMessage[] = [];
+      for (let index = 0; index < window.localStorage.length; index += 1) {
+        const key = window.localStorage.key(index);
+        if (!key?.startsWith("paper-boyfriend:chat:") || key === storageKey) {
+          continue;
+        }
+        allCharacterMessages.push(
+          ...parseStoredMessages(window.localStorage.getItem(key)),
+        );
+      }
+      allCharacterMessages.push(...currentMessages);
+
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           characterId: character.id,
           message: userText,
-          history: currentMessages.slice(-12).map(({ sender, text, type }) => ({
-            sender,
-            text,
-            type,
-          })),
+          history: currentMessages
+            .filter((message) => message.type !== "image")
+            .slice(-12)
+            .map(({ sender, text, type }) => ({ sender, text, type })),
+          mediaState: getBalancedMediaState(
+            currentMessages,
+            allCharacterMessages,
+          ),
         }),
         signal: controller.signal,
       });
@@ -232,14 +364,28 @@ export default function ChatRoom({ character }: { character: Character }) {
 
       const parsedReply = parseChatReply(data.reply);
 
-      setMessages((current) => [
-        ...current,
-        createMessage(
+      setMessages((current) => {
+        const nextMessages: ChatMessage[] = [
+          ...current,
+          createMessage(
           "character",
           parsedReply.text,
           parsedReply.type,
-        ),
-      ]);
+          ),
+        ];
+        if (data.imageTask?.taskId) {
+          nextMessages.push({
+            ...createMessage(
+              "character",
+              `${character.name}发来了一张此刻的生活照`,
+              "image",
+            ),
+            imageTaskId: data.imageTask.taskId,
+            imageStatus: "processing",
+          });
+        }
+        return nextMessages;
+      });
       setFailedMessage("");
     } catch {
       if (controller.signal.aborted) return;
@@ -311,7 +457,15 @@ export default function ChatRoom({ character }: { character: Character }) {
               )}
               <div className="message-content">
                 {message.type === "voice-placeholder" ? (
-                  <VoiceMessageCard text={message.text} />
+                  <VoiceMessageCard
+                    text={message.text}
+                    characterId={character.id}
+                  />
+                ) : message.type === "image" ? (
+                  <ImageMessageCard
+                    message={message}
+                    onUpdate={updateImageMessage}
+                  />
                 ) : (
                   <div className="message-bubble">{message.text}</div>
                 )}

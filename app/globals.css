@@ -1590,6 +1590,59 @@ a {
   font-size: 11px;
 }
 
+.character-image-card {
+  width: min(100%, 420px);
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
+  border-radius: 8px 22px 22px 22px;
+  background: #fff;
+  box-shadow: 0 12px 32px rgba(58, 75, 62, 0.12);
+}
+
+.character-image-card img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  object-fit: cover;
+}
+
+.character-image-card small {
+  display: block;
+  padding: 11px 14px 13px;
+  color: #667067;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.image-generating {
+  display: grid;
+  min-height: 210px;
+  place-content: center;
+  justify-items: center;
+  gap: 12px;
+  color: #718078;
+  background:
+    radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.9), transparent 45%),
+    color-mix(in srgb, var(--accent) 9%, #f6f8f4);
+}
+
+.image-generating span {
+  width: 28px;
+  height: 28px;
+  border: 3px solid color-mix(in srgb, var(--accent) 25%, transparent);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: slow-turn 0.9s linear infinite;
+}
+
+.image-generating p,
+.character-image-card > p {
+  margin: 0;
+  padding: 22px;
+  text-align: center;
+}
+
 .chat-error {
   display: flex;
   width: min(100%, 470px);

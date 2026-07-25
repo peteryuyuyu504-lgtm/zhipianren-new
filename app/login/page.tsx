@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, PointerEvent as ReactPointerEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { validateMockLogin } from "@/lib/mock-login";
 import { saveMockLogin } from "@/lib/mock-auth";
@@ -11,6 +11,24 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  function handlePanelPointerMove(event: ReactPointerEvent<HTMLElement>) {
+    const element = event.currentTarget;
+    const bounds = element.getBoundingClientRect();
+    const x = (event.clientX - bounds.left) / bounds.width;
+    const y = (event.clientY - bounds.top) / bounds.height;
+
+    element.style.setProperty("--login-pointer-x", `${x * 100}%`);
+    element.style.setProperty("--login-pointer-y", `${y * 100}%`);
+    element.style.setProperty("--login-rotate-x", `${(0.5 - y) * 10}deg`);
+    element.style.setProperty("--login-rotate-y", `${(x - 0.5) * 10}deg`);
+  }
+
+  function resetPanelTilt(event: ReactPointerEvent<HTMLElement>) {
+    const element = event.currentTarget;
+    element.style.setProperty("--login-rotate-x", "0deg");
+    element.style.setProperty("--login-rotate-y", "0deg");
+  }
 
   // 用户重新输入后清除旧错误，避免过期提示继续干扰当前操作。
   function updateEmail(value: string) {
@@ -70,8 +88,23 @@ export default function LoginPage() {
 
   return (
     <main className="login-page">
+      <div className="login-motion-orbs" aria-hidden="true">
+        <i />
+        <i />
+        <i />
+      </div>
       <div className="login-shell">
-        <section className="login-intro-panel" aria-labelledby="product-name">
+        <section
+          className="login-intro-panel login-tilt-panel login-reveal login-reveal-intro"
+          aria-labelledby="product-name"
+          onPointerMove={handlePanelPointerMove}
+          onPointerLeave={resetPanelTilt}
+        >
+          <div className="login-sparkles" aria-hidden="true">
+            <i />
+            <i />
+            <i />
+          </div>
           <p className="login-version">2.0 · 简装版</p>
           <h1 id="product-name">纸片人男友 <em>2.0</em></h1>
           <p className="login-product-copy">
@@ -85,7 +118,12 @@ export default function LoginPage() {
           </div>
         </section>
 
-        <section className="login-card" aria-labelledby="login-title">
+        <section
+          className="login-card login-tilt-panel login-reveal login-reveal-form"
+          aria-labelledby="login-title"
+          onPointerMove={handlePanelPointerMove}
+          onPointerLeave={resetPanelTilt}
+        >
           <div className="login-stage"><span aria-hidden="true" />开发阶段 · Mock 登录</div>
 
           <header className="login-heading">

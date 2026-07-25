@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { characters } from "@/data/characters";
+import { GlowingEffect } from "@/components/glowing-effect";
 
 export default function CharacterSelection() {
   return (
@@ -32,6 +33,7 @@ export default function CharacterSelection() {
                   priority={index < 2}
                   sizes="(max-width: 560px) 118px, (max-width: 900px) 50vw, 25vw"
                 />
+                <GlowingEffect accent={character.accent} />
               </div>
               {/* 当前仅展示静态状态，后续再替换为真实在线状态。 */}
               <span className={`availability-badge ${character.isOnline ? "online" : "offline"}`}>

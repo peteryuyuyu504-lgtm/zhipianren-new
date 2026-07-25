@@ -22,6 +22,46 @@ import { parseChatReply } from "@/lib/chat-reply";
 
 const MAX_SAVED_MESSAGES = 100;
 
+const CHAT_PRESENTATIONS: Record<
+  string,
+  {
+    theme: string;
+    statusLabel: string;
+    status: string;
+    onlineLabel: string;
+    placeholder: string;
+  }
+> = {
+  "shen-qingzhou": {
+    theme: "bookshop",
+    statusLabel: "书店此刻",
+    status: "雨刚停 · 正在整理旧书",
+    onlineLabel: "在线 · 安静陪伴中",
+    placeholder: "和沈清舟说点什么…",
+  },
+  "ji-yu": {
+    theme: "system",
+    statusLabel: "SYSTEM STATUS",
+    status: "专注模式 · 23 min",
+    onlineLabel: "离线留言 · 通常很快回复",
+    placeholder: "输入一条待处理的信息…",
+  },
+  "lin-lie": {
+    theme: "court",
+    statusLabel: "今日训练",
+    status: "投篮 87% · 状态火热",
+    onlineLabel: "在线 · 刚结束训练",
+    placeholder: "喊林烈一声…",
+  },
+  "gu-wenshen": {
+    theme: "atelier",
+    statusLabel: "TONIGHT'S NOTE",
+    status: "雪松 · 鸢尾 · 潮湿空气",
+    onlineLabel: "离线 · 留下一段气味",
+    placeholder: "写下此刻没有名字的情绪…",
+  },
+};
+
 function createMessage(sender: ChatMessage["sender"], text: string, type: ChatMessageType = "text") {
   return {
     id: globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`,
@@ -255,6 +295,8 @@ export default function ChatRoom({ character }: { character: Character }) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const requestControllerRef = useRef<AbortController | null>(null);
   const sessionStats = useMemo(() => getChatSessionStats(messages), [messages]);
+  const presentation =
+    CHAT_PRESENTATIONS[character.id] ?? CHAT_PRESENTATIONS["shen-qingzhou"];
 
   // 每位角色使用独立键名，避免不同角色的本地聊天记录混在一起。
   const storageKey = getChatStorageKey(character.id);
@@ -415,8 +457,41 @@ export default function ChatRoom({ character }: { character: Character }) {
   }
 
   return (
-    <main className="chat-page" style={{ "--accent": character.accent } as React.CSSProperties}>
+    <main
+      className="chat-page"
+      data-chat-theme={presentation.theme}
+      style={{ "--accent": character.accent } as React.CSSProperties}
+    >
       <section className="chat-shell">
+        <aside className="chat-character-panel">
+          <Link className="panel-back-button" href="/characters" aria-label="返回选择角色">
+            ←
+          </Link>
+          <div className="panel-portrait">
+            <Image
+              src={character.image}
+              alt={`${character.name}的头像`}
+              fill
+              priority
+              sizes="116px"
+            />
+          </div>
+          <div className="panel-identity">
+            <h2>{character.name}</h2>
+            <p>{character.occupation}</p>
+          </div>
+          <blockquote>{character.tagline}</blockquote>
+          <div className="panel-tags" aria-label="人物特点">
+            {character.tags.map((tag) => <span key={tag}>{tag}</span>)}
+          </div>
+          <div className="panel-spacer" />
+          <div className="panel-status">
+            <small>{presentation.statusLabel}</small>
+            <strong>{presentation.status}</strong>
+          </div>
+        </aside>
+
+        <div className="chat-conversation">
         <header className="chat-header">
           <Link className="back-button" href="/characters" aria-label="返回选择角色">←</Link>
           <div className="mini-portrait" aria-hidden="true">
@@ -426,7 +501,7 @@ export default function ChatRoom({ character }: { character: Character }) {
             <h1>{character.name}</h1>
             <p>
               <span className={`online-dot ${character.isOnline ? "" : "offline"}`} />
-              {character.isOnline ? "在线" : "离线"}
+              {presentation.onlineLabel}
             </p>
           </div>
           <button className="more-button" type="button" aria-label="更多选项" disabled>•••</button>
@@ -508,13 +583,14 @@ export default function ChatRoom({ character }: { character: Character }) {
               setDraft(event.target.value);
               if (replyError) setReplyError("");
             }}
-            placeholder={`和${character.name}说点什么…`}
+            placeholder={presentation.placeholder}
             autoComplete="off"
             maxLength={500}
             disabled={isTyping || !isHistoryReady}
           />
           <button type="submit" disabled={!draft.trim() || isTyping || !isHistoryReady}>发送</button>
         </form>
+        </div>
       </section>
       <p className="prototype-note">聊天记录暂存在当前浏览器中，清理浏览器数据后可能消失。</p>
     </main>

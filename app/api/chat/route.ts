@@ -181,9 +181,12 @@ export async function POST(request: Request) {
       "OpenRouter chat request failed:",
       error instanceof Error ? error.message : "Unknown upstream error",
     );
-    return NextResponse.json(
-      { error: "模型服务暂时不可用，请稍后重试" },
-      { status: 503 },
-    );
+    // 开发期保障：真实模型因密钥、额度、模型或网络问题不可用时，
+    // 使用角色已有回复降级，避免整个聊天流程中断。
+    const response: ChatResponse = {
+      reply: wantsVoice ? `[VOICE]${reply}` : reply,
+      mode: "mock",
+    };
+    return NextResponse.json(response);
   }
 }

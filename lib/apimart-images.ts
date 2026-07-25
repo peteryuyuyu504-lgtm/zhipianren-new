@@ -1,7 +1,7 @@
 const APIMART_BASE_URL = "https://api.apimart.ai";
 const DEFAULT_TEXT_TO_IMAGE_MODEL = "gpt-image-2";
 const DEFAULT_IMAGE_TO_IMAGE_MODEL = "grok-imagine-1.5-apimart";
-const REQUEST_TIMEOUT_MS = 30_000;
+const REQUEST_TIMEOUT_MS = 60_000;
 
 type SubmitImageResponse = {
   code?: number;
@@ -16,7 +16,12 @@ type UploadImageResponse = {
   filename?: string;
 };
 
-const referenceImageCache = new Map<string, string>();
+const globalForApimart = globalThis as typeof globalThis & {
+  apimartReferenceImageCache?: Map<string, string>;
+};
+const referenceImageCache =
+  globalForApimart.apimartReferenceImageCache ?? new Map<string, string>();
+globalForApimart.apimartReferenceImageCache = referenceImageCache;
 
 export type ImageTaskStatus =
   | "pending"
@@ -45,18 +50,25 @@ async function requestApimart(
   path: string,
   init?: RequestInit,
 ) {
-  const response = await fetch(`${APIMART_BASE_URL}${path}`, {
-    ...init,
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      ...init?.headers,
-    },
-    cache: "no-store",
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-  });
+  let response: Response;
+
+  try {
+    response = await fetch(`${APIMART_BASE_URL}${path}`, {
+      ...init,
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        ...init?.headers,
+      },
+      cache: "no-store",
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : "Unknown network error";
+    throw new Error(`APIMart ${path} network request failed: ${detail}`);
+  }
 
   if (!response.ok) {
-    throw new Error(`APIMart request failed with status ${response.status}`);
+    throw new Error(`APIMart ${path} request failed with status ${response.status}`);
   }
 
   return response;
@@ -138,10 +150,16 @@ async function uploadCharacterReference(
     path.basename(imagePath),
   );
 
-  const response = await requestApimart(apiKey, "/v1/uploads/images", {
-    method: "POST",
-    body: formData,
-  });
+  let response: Response;
+  try {
+    response = await requestApimart(apiKey, "/v1/uploads/images", {
+      method: "POST",
+      body: formData,
+    });
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : "Unknown upload error";
+    throw new Error(`Character reference upload failed: ${detail}`);
+  }
   const data = (await response.json()) as UploadImageResponse;
   const url = data.url?.trim();
   if (!url) throw new Error("APIMart did not return an uploaded image URL");
@@ -156,7 +174,12 @@ export async function submitCharacterSceneImage(
   prompt: string,
 ) {
   const referenceUrl = await uploadCharacterReference(apiKey, character);
-  return submitImageToImage(apiKey, prompt, referenceUrl);
+  try {
+    return await submitImageToImage(apiKey, prompt, referenceUrl);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : "Unknown submission error";
+    throw new Error(`Character image task submission failed: ${detail}`);
+  }
 }
 
 export async function getImageTask(apiKey: string, taskId: string) {

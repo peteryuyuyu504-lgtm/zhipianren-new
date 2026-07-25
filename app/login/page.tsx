@@ -51,8 +51,21 @@ export default function LoginPage() {
       setIsSubmitting(false);
       return;
     }
+    const adminSession = await fetch("/api/auth/admin-session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: result.email }),
+    }).then((response) => response.json() as Promise<{ isAdmin: boolean }>);
+
+    const requestedPath = new URLSearchParams(window.location.search).get("next");
+    if (requestedPath === "/admin" && !adminSession.isAdmin) {
+      setError("这个邮箱不是管理员账号。请使用 admin@example.com 登录后台。");
+      setIsSubmitting(false);
+      return;
+    }
+
     setIsSubmitting(false);
-    router.push("/characters");
+    router.push(adminSession.isAdmin || requestedPath === "/admin" ? "/admin" : "/characters");
   }
 
   return (

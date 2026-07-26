@@ -1,5 +1,6 @@
 const DEFAULT_MODERATION_MODEL = "evolink-moderation-1.0";
 const DEFAULT_TIMEOUT_MS = 8_000;
+const ENABLED_VALUES = new Set(["1", "true", "yes", "on"]);
 
 type ModerationResponse = {
   results?: Array<{
@@ -26,7 +27,22 @@ function getModerationUrl(baseUrl: string) {
   return `${baseUrl.replace(/\/+$/, "")}/moderations`;
 }
 
+export function isModerationEnabled() {
+  const value = process.env.MODERATION_ENABLED?.trim().toLowerCase();
+  if (value) return ENABLED_VALUES.has(value);
+
+  // Keep the public production deployment protected even if the switch was
+  // accidentally omitted. Local development and Vercel Preview stay off.
+  return process.env.VERCEL_ENV === "production";
+}
+
 export async function moderateText(text: string) {
+  // Development and Preview environments can disable paid moderation calls.
+  // Vercel Production remains protected by default.
+  if (!isModerationEnabled()) {
+    return { flagged: false };
+  }
+
   const apiKey = process.env.MODERATION_API_KEY?.trim();
   const baseUrl = process.env.MODERATION_BASE_URL?.trim();
   const model =

@@ -89,7 +89,11 @@ export async function POST(request: Request) {
   });
   const wantsVoice = mediaDecision.voice;
   const imageScene = mediaDecision.image
-    ? getCharacterScene(activeCharacter)
+    ? getCharacterScene(
+        activeCharacter,
+        body.mediaState.completedRounds,
+        message,
+      )
     : undefined;
   const apiKey = process.env.OPENROUTER_API_KEY?.trim();
 
@@ -104,7 +108,12 @@ export async function POST(request: Request) {
       const task = await submitCharacterSceneImage(
         imageApiKey,
         activeCharacter,
-        createCharacterScenePrompt(activeCharacter, message, companionReply),
+        createCharacterScenePrompt(
+          activeCharacter,
+          message,
+          companionReply,
+          imageScene,
+        ),
       );
       return { taskId: task.taskId, kind: "image-to-image" as const };
     } catch (error) {

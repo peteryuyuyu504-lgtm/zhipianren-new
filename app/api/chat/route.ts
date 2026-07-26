@@ -77,8 +77,11 @@ export async function POST(request: Request) {
 
   const history = body.history.slice(-MAX_HISTORY_ITEMS);
   const boundaryReply = getMockBoundaryReply(message);
-  const characterReplyCount = history.filter((item) => item.sender === "character").length;
-  const reply = character.replies[characterReplyCount % character.replies.length];
+  // `history` is intentionally capped, so counting replies from it becomes
+  // constant once a conversation is longer than the cap. Use the full-session
+  // round count sent by the client to keep mock/fallback replies rotating.
+  const reply =
+    character.replies[body.mediaState.completedRounds % character.replies.length];
   const mediaDecision = decideBalancedMedia({
     characterId,
     message,

@@ -4,6 +4,7 @@ import type { ChatHistoryItem, ChatRequest, ChatResponse } from "@/lib/chat-type
 import { getMockBoundaryReply } from "@/lib/chat-policy";
 import { requestOpenRouterReply } from "@/lib/openrouter";
 import { submitCharacterSceneImage } from "@/lib/apimart-images";
+import { moderateText } from "@/lib/moderation";
 import {
   createCharacterScenePrompt,
   decideBalancedMedia,
@@ -12,6 +13,25 @@ import {
 
 const MAX_HISTORY_ITEMS = 12;
 const MAX_MESSAGE_LENGTH = 2_000;
+
+async function getModerationBlockResponse(
+  text: string,
+  flaggedMessage: string,
+) {
+  try {
+    const result = await moderateText(text);
+    return result.flagged
+      ? NextResponse.json({ error: flaggedMessage }, { status: 422 })
+      : null;
+  } catch {
+    // Do not log the submitted text or upstream credentials.
+    console.error("Moderation service request failed");
+    return NextResponse.json(
+      { error: "内容安全检测服务暂时不可用，请稍后再试" },
+      { status: 503 },
+    );
+  }
+}
 
 function isHistoryItem(value: unknown): value is ChatHistoryItem {
   if (!value || typeof value !== "object") return false;
@@ -75,6 +95,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "媒体状态格式不正确" }, { status: 400 });
   }
 
+  const inputModerationResponse = await getModerationBlockResponse(
+    message,
+    "检测到敏感内容，请重新输入",
+  );
+  if (inputModerationResponse) return inputModerationResponse;
+
   const history = body.history.slice(-MAX_HISTORY_ITEMS);
   const boundaryReply = getMockBoundaryReply(message);
   // `history` is intentionally capped, so counting replies from it becomes
@@ -126,6 +152,12 @@ export async function POST(request: Request) {
   }
 
   if (boundaryReply) {
+    const outputModerationResponse = await getModerationBlockResponse(
+      boundaryReply.reply,
+      "回复未通过安全审核，请换个话题再试",
+    );
+    if (outputModerationResponse) return outputModerationResponse;
+
     const response: ChatResponse = {
       reply: boundaryReply.reply,
       mode: "mock",
@@ -134,6 +166,12 @@ export async function POST(request: Request) {
   }
 
   if (!apiKey) {
+    const outputModerationResponse = await getModerationBlockResponse(
+      reply,
+      "回复未通过安全审核，请换个话题再试",
+    );
+    if (outputModerationResponse) return outputModerationResponse;
+
     const imageTask = await createImageTask(reply);
     const response: ChatResponse = {
       reply:
@@ -158,6 +196,12 @@ export async function POST(request: Request) {
       willSendVoice: wantsVoice,
     });
     let cleanReply = liveReply.replace(/^(?:\[VOICE\]\s*)+/i, "").trim();
+    const outputModerationResponse = await getModerationBlockResponse(
+      cleanReply,
+      "回复未通过安全审核，请换个话题再试",
+    );
+    if (outputModerationResponse) return outputModerationResponse;
+
     const imageTask = await createImageTask(cleanReply);
 
     if (mediaDecision.image && imageTask) {
@@ -195,6 +239,12 @@ export async function POST(request: Request) {
     );
     // 开发期保障：真实模型因密钥、额度、模型或网络问题不可用时，
     // 使用角色已有回复降级，避免整个聊天流程中断。
+    const outputModerationResponse = await getModerationBlockResponse(
+      reply,
+      "回复未通过安全审核，请换个话题再试",
+    );
+    if (outputModerationResponse) return outputModerationResponse;
+
     const response: ChatResponse = {
       reply: wantsVoice ? `[VOICE]${reply}` : reply,
       mode: "mock",

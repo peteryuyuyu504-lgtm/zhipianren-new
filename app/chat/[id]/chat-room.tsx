@@ -397,7 +397,21 @@ export default function ChatRoom({ character }: { character: Character }) {
         signal: controller.signal,
       });
 
-      if (!response.ok) throw new Error("聊天接口返回失败");
+      if (!response.ok) {
+        let errorMessage = "聊天接口返回失败";
+        try {
+          const errorData = (await response.json()) as { error?: unknown };
+          if (
+            typeof errorData.error === "string" &&
+            errorData.error.trim()
+          ) {
+            errorMessage = errorData.error.trim();
+          }
+        } catch {
+          // Keep the generic message when the server response is not JSON.
+        }
+        throw new Error(errorMessage);
+      }
 
       const data = (await response.json()) as Partial<ChatResponse>;
       if (typeof data.reply !== "string" || !data.reply.trim()) {
@@ -429,10 +443,14 @@ export default function ChatRoom({ character }: { character: Character }) {
         return nextMessages;
       });
       setFailedMessage("");
-    } catch {
+    } catch (error) {
       if (controller.signal.aborted) return;
       setFailedMessage(userText);
-      setReplyError("回复暂时没有送达，请重试。");
+      setReplyError(
+        error instanceof Error
+          ? error.message
+          : "回复暂时没有送达，请重试。",
+      );
     } finally {
       if (!controller.signal.aborted) setIsTyping(false);
     }

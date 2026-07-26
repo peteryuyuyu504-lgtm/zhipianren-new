@@ -23,9 +23,12 @@ async function getModerationBlockResponse(
     return result.flagged
       ? NextResponse.json({ error: flaggedMessage }, { status: 422 })
       : null;
-  } catch {
+  } catch (error) {
     // Do not log the submitted text or upstream credentials.
-    console.error("Moderation service request failed");
+    console.error(
+      "Moderation service request failed:",
+      error instanceof Error ? error.message : "Unknown moderation error",
+    );
     return NextResponse.json(
       { error: "内容安全检测服务暂时不可用，请稍后再试" },
       { status: 503 },

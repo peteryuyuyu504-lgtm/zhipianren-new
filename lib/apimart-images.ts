@@ -1,6 +1,6 @@
 const APIMART_BASE_URL = "https://api.apimart.ai";
 const DEFAULT_TEXT_TO_IMAGE_MODEL = "gpt-image-2";
-const DEFAULT_IMAGE_TO_IMAGE_MODEL = "grok-imagine-1.5-apimart";
+const DEFAULT_IMAGE_TO_IMAGE_MODEL = "grok-imagine-1.5-edit-apimart";
 const REQUEST_TIMEOUT_MS = 60_000;
 
 type SubmitImageResponse = {

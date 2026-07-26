@@ -1,5 +1,6 @@
-import { notFound } from "next/navigation";
+import Link from "next/link";
 import { characters, getCharacter } from "@/data/characters";
+import MockAuthGuard from "@/components/mock-auth-guard";
 import ChatRoom from "./chat-room";
 
 export function generateStaticParams() {
@@ -10,7 +11,16 @@ export default async function ChatPage({ params }: { params: Promise<{ id: strin
   const { id } = await params;
   const character = getCharacter(id);
 
-  if (!character) notFound();
-
-  return <ChatRoom character={character} />;
+  return (
+    <MockAuthGuard>
+      {character ? (
+        <ChatRoom character={character} />
+      ) : (
+        <main className="not-found-page">
+          <p>没有找到这个角色。</p>
+          <Link href="/characters">返回角色选择页</Link>
+        </main>
+      )}
+    </MockAuthGuard>
+  );
 }

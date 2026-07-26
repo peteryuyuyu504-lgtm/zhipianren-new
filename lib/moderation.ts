@@ -29,16 +29,12 @@ function getModerationUrl(baseUrl: string) {
 
 export function isModerationEnabled() {
   const value = process.env.MODERATION_ENABLED?.trim().toLowerCase();
-  if (value) return ENABLED_VALUES.has(value);
-
-  // Keep the public production deployment protected even if the switch was
-  // accidentally omitted. Local development and Vercel Preview stay off.
-  return process.env.VERCEL_ENV === "production";
+  return value ? ENABLED_VALUES.has(value) : false;
 }
 
 export async function moderateText(text: string) {
-  // Development and Preview environments can disable paid moderation calls.
-  // Vercel Production remains protected by default.
+  // Paid moderation is opt-in so development and preview testing never spend
+  // credits unless MODERATION_ENABLED=true is configured explicitly.
   if (!isModerationEnabled()) {
     return { flagged: false };
   }

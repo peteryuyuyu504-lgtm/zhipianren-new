@@ -7,6 +7,14 @@ type ModerationResponse = {
   }>;
 };
 
+type ModerationErrorResponse = {
+  error?: {
+    code?: unknown;
+    message?: unknown;
+  };
+  message?: unknown;
+};
+
 export class ModerationServiceError extends Error {
   constructor(message: string) {
     super(message);
@@ -56,8 +64,31 @@ export async function moderateText(text: string) {
   }
 
   if (!response.ok) {
+    let detail = "";
+
+    try {
+      const errorData = (await response.json()) as ModerationErrorResponse;
+      const code =
+        typeof errorData.error?.code === "string" ? errorData.error.code : "";
+      const message =
+        typeof errorData.error?.message === "string"
+          ? errorData.error.message
+          : typeof errorData.message === "string"
+            ? errorData.message
+            : "";
+      detail = [code, message]
+        .filter(Boolean)
+        .join(": ")
+        .replace(/[\r\n]+/g, " ")
+        .slice(0, 240);
+    } catch {
+      // Some gateways return an HTML or empty error response.
+    }
+
     throw new ModerationServiceError(
-      `Moderation request failed with status ${response.status}`,
+      `Moderation request failed with status ${response.status}${
+        detail ? `: ${detail}` : ""
+      }`,
     );
   }
 

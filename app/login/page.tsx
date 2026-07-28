@@ -69,11 +69,21 @@ export default function LoginPage() {
       setIsSubmitting(false);
       return;
     }
-    const adminSession = await fetch("/api/auth/admin-session", {
+    const adminSessionResponse = await fetch("/api/auth/admin-session", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email: result.email }),
-    }).then((response) => response.json() as Promise<{ isAdmin: boolean }>);
+    });
+    const adminSession = (await adminSessionResponse.json()) as {
+      isAdmin?: boolean;
+      error?: string;
+    };
+
+    if (!adminSessionResponse.ok) {
+      setError(adminSession.error || "登录服务暂时不可用，请稍后再试");
+      setIsSubmitting(false);
+      return;
+    }
 
     const requestedPath = new URLSearchParams(window.location.search).get("next");
     if (requestedPath === "/admin" && !adminSession.isAdmin) {

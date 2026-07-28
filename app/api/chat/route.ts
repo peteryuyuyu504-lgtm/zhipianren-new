@@ -5,6 +5,9 @@ import { getMockBoundaryReply } from "@/lib/chat-policy";
 import { requestOpenRouterReply } from "@/lib/openrouter";
 import { submitCharacterSceneImage } from "@/lib/apimart-images";
 import { moderateText } from "@/lib/moderation";
+import { consumeDailyChatQuota } from "@/lib/chat-quota";
+import { getCurrentUserId } from "@/lib/user-session";
+import { CHAT_MESSAGE_MAX_LENGTH } from "@/lib/chat-limits";
 import {
   createCharacterScenePrompt,
   decideBalancedMedia,
@@ -12,7 +15,6 @@ import {
 } from "@/lib/media-policy";
 
 const MAX_HISTORY_ITEMS = 12;
-const MAX_MESSAGE_LENGTH = 2_000;
 
 async function getModerationBlockResponse(
   text: string,
@@ -82,8 +84,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "角色和消息不能为空" }, { status: 400 });
   }
 
-  if (message.length > MAX_MESSAGE_LENGTH) {
-    return NextResponse.json({ error: "消息内容过长" }, { status: 400 });
+  if (message.length > CHAT_MESSAGE_MAX_LENGTH) {
+    return NextResponse.json(
+      { error: "消息长度超过限制，请缩短后重新发送。" },
+      { status: 400 },
+    );
   }
 
   if (!character) {
@@ -96,6 +101,33 @@ export async function POST(request: Request) {
   }
   if (!isMediaState(body.mediaState)) {
     return NextResponse.json({ error: "媒体状态格式不正确" }, { status: 400 });
+  }
+
+  const userId = await getCurrentUserId();
+  if (!userId) {
+    return NextResponse.json(
+      { error: "登录状态已失效，请重新登录。" },
+      { status: 401 },
+    );
+  }
+
+  try {
+    const quota = await consumeDailyChatQuota(userId);
+    if (!quota.allowed) {
+      return NextResponse.json(
+        { error: "今日体验次数已用完，请明天继续体验。" },
+        { status: 429 },
+      );
+    }
+  } catch (error) {
+    console.error(
+      "Daily chat quota request failed:",
+      error instanceof Error ? error.message : "Unknown database error",
+    );
+    return NextResponse.json(
+      { error: "聊天服务暂时不可用，请稍后再试。" },
+      { status: 503 },
+    );
   }
 
   const inputModerationResponse = await getModerationBlockResponse(

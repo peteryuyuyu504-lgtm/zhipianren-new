@@ -19,6 +19,7 @@ import {
   parseStoredMessages,
 } from "@/lib/chat-storage";
 import { parseChatReply } from "@/lib/chat-reply";
+import { CHAT_MESSAGE_MAX_LENGTH } from "@/lib/chat-limits";
 
 const MAX_SAVED_MESSAGES = 100;
 
@@ -460,6 +461,10 @@ export default function ChatRoom({ character }: { character: Character }) {
     event.preventDefault();
     const text = draft.trim();
     if (!text || isTyping || !isHistoryReady) return;
+    if (text.length > CHAT_MESSAGE_MAX_LENGTH) {
+      setReplyError("消息长度超过限制，请缩短后重新发送。");
+      return;
+    }
 
     const userMessage = createMessage("user", text);
     const nextMessages = [...messages, userMessage];
@@ -603,7 +608,7 @@ export default function ChatRoom({ character }: { character: Character }) {
             }}
             placeholder={presentation.placeholder}
             autoComplete="off"
-            maxLength={500}
+            maxLength={CHAT_MESSAGE_MAX_LENGTH}
             disabled={isTyping || !isHistoryReady}
           />
           <button type="submit" disabled={!draft.trim() || isTyping || !isHistoryReady}>发送</button>

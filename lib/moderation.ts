@@ -1,3 +1,5 @@
+import { assessLocalContent } from "@/lib/content-safety";
+
 const DEFAULT_MODERATION_MODEL = "evolink-moderation-1.0";
 const DEFAULT_TIMEOUT_MS = 8_000;
 const ENABLED_VALUES = new Set(["1", "true", "yes", "on"]);
@@ -33,6 +35,18 @@ export function isModerationEnabled() {
 }
 
 export async function moderateText(text: string) {
+  const localAssessment = assessLocalContent(text);
+
+  if (localAssessment.level === "block") {
+    return { flagged: true };
+  }
+
+  // Normal conversation is approved locally. No network request is made even
+  // when paid moderation is enabled in production.
+  if (localAssessment.level === "safe") {
+    return { flagged: false };
+  }
+
   // Paid moderation is opt-in so development and preview testing never spend
   // credits unless MODERATION_ENABLED=true is configured explicitly.
   if (!isModerationEnabled()) {

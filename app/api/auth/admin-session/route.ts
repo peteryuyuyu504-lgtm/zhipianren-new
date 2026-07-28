@@ -5,12 +5,72 @@ import { getDb } from "@/src/db";
 import { users } from "@/src/db/schema";
 
 export async function POST(request: Request) {
-  const body = (await request.json().catch(() => null)) as { email?: unknown } | null;
+  const body = (await request.json().catch(() => null)) as {
+    email?: unknown;
+    turnstileToken?: unknown;
+  } | null;
   const email =
     typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
+  const turnstileToken =
+    typeof body?.turnstileToken === "string" ? body.turnstileToken : "";
+  const turnstileSecretKey = process.env.TURNSTILE_SECRET_KEY?.trim();
 
   if (!email || email.length > 255) {
     return NextResponse.json({ error: "请输入有效邮箱" }, { status: 400 });
+  }
+  if (!turnstileSecretKey) {
+    return NextResponse.json(
+      { error: "人机验证服务尚未配置，请联系网站管理员。" },
+      { status: 503 },
+    );
+  }
+
+  if (!turnstileToken || turnstileToken.length > 2048) {
+    return NextResponse.json(
+      { error: "请先完成人机验证。" },
+      { status: 403 },
+    );
+  }
+
+  let turnstileVerified = false;
+  try {
+    const verifyResponse = await fetch(
+      "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          secret: turnstileSecretKey,
+          response: turnstileToken,
+        }),
+        signal: AbortSignal.timeout(8000),
+      },
+    );
+
+    if (!verifyResponse.ok) {
+      throw new Error(`Turnstile returned HTTP ${verifyResponse.status}`);
+    }
+
+    const verifyResult = (await verifyResponse.json()) as {
+      success?: boolean;
+    };
+    turnstileVerified = verifyResult.success === true;
+  } catch (error) {
+    console.error(
+      "Turnstile verification request failed:",
+      error instanceof Error ? error.message : "Unknown Turnstile error",
+    );
+    return NextResponse.json(
+      { error: "人机验证服务暂时不可用，请稍后再试。" },
+      { status: 503 },
+    );
+  }
+
+  if (!turnstileVerified) {
+    return NextResponse.json(
+      { error: "人机验证失败，请重新验证。" },
+      { status: 403 },
+    );
   }
 
   let userId: number;

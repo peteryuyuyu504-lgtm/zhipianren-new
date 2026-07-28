@@ -1851,6 +1851,53 @@ a {
   opacity: 0.45;
 }
 
+.login-session-return {
+  display: grid;
+  gap: 12px;
+  padding: 20px;
+  border: 1px solid rgba(104, 164, 68, 0.2);
+  border-radius: 16px;
+  color: #547346;
+  background: rgba(248, 252, 244, 0.88);
+}
+
+.login-session-return strong {
+  color: #2f4f25;
+  font-size: 18px;
+}
+
+.login-session-return p {
+  margin: 0 0 4px;
+  color: #687463;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.login-session-return button {
+  min-height: 46px;
+  border: 0;
+  border-radius: 12px;
+  color: #183510;
+  background: #8fd14f;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.login-session-return button:hover {
+  background: #7cc23f;
+}
+
+.login-session-return .login-switch-account {
+  color: #5b853f;
+  border: 1px solid rgba(104, 164, 68, 0.28);
+  background: #fbfdf9;
+}
+
+.login-session-return .login-switch-account:hover {
+  background: #f1f8ec;
+}
+
 .login-mock-note {
   margin-top: 28px;
   padding: 14px 15px;

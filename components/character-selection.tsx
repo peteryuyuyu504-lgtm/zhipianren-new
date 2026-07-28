@@ -12,7 +12,7 @@ export default function CharacterSelection() {
         <nav className="selection-topbar" aria-label="页面导航">
           <Link className="selection-login-link" href="/login">
             <span aria-hidden="true">←</span>
-            返回登录
+            返回首页
           </Link>
           <span className="selection-brand">纸片人男友 · ONLINE</span>
         </nav>

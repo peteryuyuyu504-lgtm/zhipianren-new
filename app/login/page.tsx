@@ -1,9 +1,10 @@
 "use client";
 
-import { FormEvent, PointerEvent as ReactPointerEvent, useState } from "react";
+import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { validateMockLogin } from "@/lib/mock-login";
 import { saveMockLogin } from "@/lib/mock-auth";
+import { TeamSectionBlock } from "@/components/ui/team-section-block-shadcnui";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -11,24 +12,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  function handlePanelPointerMove(event: ReactPointerEvent<HTMLElement>) {
-    const element = event.currentTarget;
-    const bounds = element.getBoundingClientRect();
-    const x = (event.clientX - bounds.left) / bounds.width;
-    const y = (event.clientY - bounds.top) / bounds.height;
-
-    element.style.setProperty("--login-pointer-x", `${x * 100}%`);
-    element.style.setProperty("--login-pointer-y", `${y * 100}%`);
-    element.style.setProperty("--login-rotate-x", `${(0.5 - y) * 10}deg`);
-    element.style.setProperty("--login-rotate-y", `${(x - 0.5) * 10}deg`);
-  }
-
-  function resetPanelTilt(event: ReactPointerEvent<HTMLElement>) {
-    const element = event.currentTarget;
-    element.style.setProperty("--login-rotate-x", "0deg");
-    element.style.setProperty("--login-rotate-y", "0deg");
-  }
 
   // 用户重新输入后清除旧错误，避免过期提示继续干扰当前操作。
   function updateEmail(value: string) {
@@ -41,7 +24,6 @@ export default function LoginPage() {
     if (error) setError("");
   }
 
-  // 当前仅在浏览器本地验证测试账号，不发送或保存任何账号信息。
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (isSubmitting) return;
@@ -65,7 +47,7 @@ export default function LoginPage() {
     }
 
     if (!saveMockLogin()) {
-      setError("浏览器无法保存 Mock 登录状态，请允许本站使用本地存储。");
+      setError("浏览器无法保存登录状态，请允许本站使用本地存储。");
       setIsSubmitting(false);
       return;
     }
@@ -105,41 +87,37 @@ export default function LoginPage() {
       </div>
       <div className="login-shell">
         <section
-          className="login-intro-panel login-tilt-panel login-reveal login-reveal-intro"
+          className="login-intro-panel login-reveal login-reveal-intro"
           aria-labelledby="product-name"
-          onPointerMove={handlePanelPointerMove}
-          onPointerLeave={resetPanelTilt}
         >
-          <div className="login-sparkles" aria-hidden="true">
-            <i />
-            <i />
-            <i />
-          </div>
-          <p className="login-version">2.0 · 简装版</p>
-          <h1 id="product-name">纸片人男友 <em>2.0</em></h1>
+          <p className="login-version"><span aria-hidden="true" />纸片人男友 · ONLINE</p>
+          <h1 id="product-name">
+            有人等你，
+            <strong>把今天慢慢说完。</strong>
+          </h1>
           <p className="login-product-copy">
-            选一个懂你的他，<br />
-            把今天没说出口的话，慢慢说完。
+            选择喜欢的陪伴角色，从一句问候开始。日常、心事和那些没来得及说出口的话，都可以在这里慢慢聊。
           </p>
+
+          <TeamSectionBlock variant="preview" />
+
           <div className="login-feature-list" aria-label="当前可体验功能">
-            <span>邮箱登录入口</span>
-            <span>4 位角色倾听者</span>
-            <span>文字聊天闭环</span>
+            <span>4 位陪伴角色</span>
+            <span>文字与语音交流</span>
+            <span>每日体验保护</span>
           </div>
         </section>
 
         <section
-          className="login-card login-tilt-panel login-reveal login-reveal-form"
+          className="login-card login-reveal login-reveal-form"
           aria-labelledby="login-title"
-          onPointerMove={handlePanelPointerMove}
-          onPointerLeave={resetPanelTilt}
         >
-          <div className="login-stage"><span aria-hidden="true" />开发阶段 · Mock 登录</div>
+          <div className="login-stage"><span aria-hidden="true" />陪伴空间已开启</div>
 
           <header className="login-heading">
-            <p>登录 / 注册</p>
+            <p>欢迎回来</p>
             <h2 id="login-title">进入你的陪伴会话</h2>
-            <span>当前不会连接真实数据库，填写测试邮箱和至少 6 位密码即可继续。</span>
+            <span>使用邮箱登录，选择喜欢的角色，继续属于你们的对话。</span>
           </header>
 
           <form className="login-form" onSubmit={handleSubmit} noValidate autoComplete="off">
@@ -172,18 +150,17 @@ export default function LoginPage() {
 
             <div className="login-actions">
               <button type="submit" disabled={isSubmitting || !email.trim() || !password}>
-                {isSubmitting ? "正在验证…" : "登录"}
-              </button>
-              <button className="register-placeholder" type="button" disabled title="简装版暂未开放注册">
-                注册
+                {isSubmitting ? "正在进入…" : "进入陪伴空间"}
               </button>
             </div>
           </form>
 
-          <aside className="login-mock-note">
-            <strong>开发阶段说明</strong>
-            <p>先用 Mock 登录和 Mock 聊天跑通完整体验。进入产品、选择倾听者，发出第一句话。</p>
-            <p>不会保存真实邮箱、密码或任何密钥。</p>
+          <aside className="login-assurance">
+            <span aria-hidden="true">✓</span>
+            <div>
+              <strong>安心聊天，从保护隐私开始</strong>
+              <p>请勿在对话中发送密码、支付信息、身份证号等敏感内容。</p>
+            </div>
           </aside>
         </section>
       </div>

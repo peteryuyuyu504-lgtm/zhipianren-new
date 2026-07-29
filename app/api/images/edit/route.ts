@@ -1,6 +1,8 @@
 import { isIP } from "node:net";
 import { NextResponse } from "next/server";
 import { submitImageToImage } from "@/lib/apimart-images";
+import { registerGeneratedImageTask } from "@/lib/generated-images";
+import { getCurrentUserId } from "@/lib/user-session";
 
 const MAX_PROMPT_LENGTH = 2_000;
 
@@ -86,6 +88,11 @@ export async function POST(request: Request) {
     );
   }
 
+  const userId = await getCurrentUserId();
+  if (!userId) {
+    return NextResponse.json({ error: "登录状态已失效，请重新登录。" }, { status: 401 });
+  }
+
   const apiKey =
     process.env.APIMART_IMAGE_TO_IMAGE_API_KEY?.trim() ||
     process.env.APIMART_API_KEY?.trim();
@@ -97,11 +104,23 @@ export async function POST(request: Request) {
   }
 
   try {
+    const task = await submitImageToImage(apiKey, prompt, imageUrl);
+    await registerGeneratedImageTask({
+      userId,
+      taskId: task.taskId,
+      kind: "image-to-image",
+      prompt,
+    });
+
     return NextResponse.json({
-      ...(await submitImageToImage(apiKey, prompt, imageUrl)),
+      ...task,
       kind: "image-to-image",
     });
-  } catch {
+  } catch (error) {
+    console.error(
+      "Image edit task submission failed:",
+      error instanceof Error ? error.message : "Unknown image error",
+    );
     return NextResponse.json(
       { error: "图片编辑任务提交失败，请稍后重试" },
       { status: 503 },

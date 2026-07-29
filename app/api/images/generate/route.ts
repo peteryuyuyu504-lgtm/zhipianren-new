@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { submitTextToImage } from "@/lib/apimart-images";
+import { registerGeneratedImageTask } from "@/lib/generated-images";
+import { getCurrentUserId } from "@/lib/user-session";
 
 const MAX_PROMPT_LENGTH = 2_000;
 
@@ -20,6 +22,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "图片描述过长" }, { status: 400 });
   }
 
+  const userId = await getCurrentUserId();
+  if (!userId) {
+    return NextResponse.json({ error: "登录状态已失效，请重新登录。" }, { status: 401 });
+  }
+
   const apiKey =
     process.env.APIMART_TEXT_TO_IMAGE_API_KEY?.trim() ||
     process.env.APIMART_API_KEY?.trim();
@@ -31,11 +38,23 @@ export async function POST(request: Request) {
   }
 
   try {
+    const task = await submitTextToImage(apiKey, prompt);
+    await registerGeneratedImageTask({
+      userId,
+      taskId: task.taskId,
+      kind: "text-to-image",
+      prompt,
+    });
+
     return NextResponse.json({
-      ...(await submitTextToImage(apiKey, prompt)),
+      ...task,
       kind: "text-to-image",
     });
-  } catch {
+  } catch (error) {
+    console.error(
+      "Image task submission failed:",
+      error instanceof Error ? error.message : "Unknown image error",
+    );
     return NextResponse.json(
       { error: "图片任务提交失败，请稍后重试" },
       { status: 503 },

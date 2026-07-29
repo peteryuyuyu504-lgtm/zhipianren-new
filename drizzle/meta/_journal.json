@@ -15,6 +15,13 @@
       "when": 1785219793921,
       "tag": "0001_condemned_skaar",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1785297600000,
+      "tag": "0002_generated_images",
+      "breakpoints": true
     }
   ]
 }

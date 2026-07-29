@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
 import { getImageTask } from "@/lib/apimart-images";
+import {
+  getGeneratedImageTask,
+  persistCompletedTaskImage,
+} from "@/lib/generated-images";
+import { getCurrentUserId } from "@/lib/user-session";
 
 const TASK_ID_PATTERN = /^task_[A-Za-z0-9_-]{8,128}$/;
 
@@ -17,6 +22,11 @@ export async function GET(
     return NextResponse.json({ error: "图片任务类型无效" }, { status: 400 });
   }
 
+  const userId = await getCurrentUserId();
+  if (!userId) {
+    return NextResponse.json({ error: "登录状态已失效，请重新登录。" }, { status: 401 });
+  }
+
   const apiKey =
     (kind === "image-to-image"
       ? process.env.APIMART_IMAGE_TO_IMAGE_API_KEY?.trim()
@@ -30,8 +40,39 @@ export async function GET(
   }
 
   try {
-    return NextResponse.json(await getImageTask(apiKey, taskId));
-  } catch {
+    const registeredTask = await getGeneratedImageTask(userId, taskId);
+    if (!registeredTask) {
+      return NextResponse.json({ error: "图片任务不存在" }, { status: 404 });
+    }
+    if (registeredTask.imageUrl) {
+      return NextResponse.json({
+        taskId,
+        status: "completed",
+        progress: 100,
+        images: [{ url: registeredTask.imageUrl, expiresAt: null }],
+      });
+    }
+
+    const task = await getImageTask(apiKey, taskId);
+    const temporaryUrl = task.images[0]?.url;
+    if (task.status === "completed" && temporaryUrl) {
+      const permanentUrl = await persistCompletedTaskImage({
+        userId,
+        taskId,
+        temporaryUrl,
+      });
+      return NextResponse.json({
+        ...task,
+        images: [{ url: permanentUrl, expiresAt: null }],
+      });
+    }
+
+    return NextResponse.json(task);
+  } catch (error) {
+    console.error(
+      "Image task query or R2 persistence failed:",
+      error instanceof Error ? error.message : "Unknown image error",
+    );
     return NextResponse.json(
       { error: "图片任务查询失败，请稍后重试" },
       { status: 503 },

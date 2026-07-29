@@ -8,6 +8,7 @@ import { moderateText } from "@/lib/moderation";
 import { consumeDailyChatQuota } from "@/lib/chat-quota";
 import { getCurrentUserId } from "@/lib/user-session";
 import { CHAT_MESSAGE_MAX_LENGTH } from "@/lib/chat-limits";
+import { registerGeneratedImageTask } from "@/lib/generated-images";
 import {
   createCharacterScenePrompt,
   decideBalancedMedia,
@@ -110,6 +111,7 @@ export async function POST(request: Request) {
       { status: 401 },
     );
   }
+  const authenticatedUserId = userId;
 
   try {
     const quota = await consumeDailyChatQuota(userId);
@@ -166,16 +168,23 @@ export async function POST(request: Request) {
     if (!imageApiKey) return undefined;
 
     try {
+      const imagePrompt = createCharacterScenePrompt(
+        activeCharacter,
+        message,
+        companionReply,
+        imageScene,
+      );
       const task = await submitCharacterSceneImage(
         imageApiKey,
         activeCharacter,
-        createCharacterScenePrompt(
-          activeCharacter,
-          message,
-          companionReply,
-          imageScene,
-        ),
+        imagePrompt,
       );
+      await registerGeneratedImageTask({
+        userId: authenticatedUserId,
+        taskId: task.taskId,
+        kind: "image-to-image",
+        prompt: imagePrompt,
+      });
       return { taskId: task.taskId, kind: "image-to-image" as const };
     } catch (error) {
       console.error(

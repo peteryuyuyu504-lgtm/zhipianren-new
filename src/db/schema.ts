@@ -3,6 +3,7 @@ import {
   integer,
   pgTable,
   serial,
+  text,
   timestamp,
   uniqueIndex,
   varchar,
@@ -32,5 +33,25 @@ export const dailyChatUsage = pgTable(
       table.userId,
       table.usageDate,
     ),
+  ],
+);
+
+export const generatedImages = pgTable(
+  "generated_images",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    taskId: varchar("task_id", { length: 160 }).notNull(),
+    kind: varchar("kind", { length: 32 }).notNull(),
+    prompt: text("prompt").notNull(),
+    imageUrl: varchar("image_url", { length: 2_048 }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("generated_images_task_id_unique").on(table.taskId),
   ],
 );

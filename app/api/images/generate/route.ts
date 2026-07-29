@@ -39,12 +39,19 @@ export async function POST(request: Request) {
 
   try {
     const task = await submitTextToImage(apiKey, prompt);
-    await registerGeneratedImageTask({
-      userId,
-      taskId: task.taskId,
-      kind: "text-to-image",
-      prompt,
-    });
+    try {
+      await registerGeneratedImageTask({
+        userId,
+        taskId: task.taskId,
+        kind: "text-to-image",
+        prompt,
+      });
+    } catch (error) {
+      console.error(
+        "Image task persistence is unavailable; continuing without R2:",
+        error instanceof Error ? error.message : "Unknown database error",
+      );
+    }
 
     return NextResponse.json({
       ...task,

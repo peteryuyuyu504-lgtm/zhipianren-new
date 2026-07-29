@@ -165,7 +165,12 @@ export async function POST(request: Request) {
     const imageApiKey =
       process.env.APIMART_IMAGE_TO_IMAGE_API_KEY?.trim() ||
       process.env.APIMART_API_KEY?.trim();
-    if (!imageApiKey) return undefined;
+    if (!imageApiKey) {
+      console.error(
+        "Character image request skipped: APIMART_IMAGE_TO_IMAGE_API_KEY and APIMART_API_KEY are both missing",
+      );
+      return undefined;
+    }
 
     try {
       const imagePrompt = createCharacterScenePrompt(
@@ -179,12 +184,19 @@ export async function POST(request: Request) {
         activeCharacter,
         imagePrompt,
       );
-      await registerGeneratedImageTask({
-        userId: authenticatedUserId,
-        taskId: task.taskId,
-        kind: "image-to-image",
-        prompt: imagePrompt,
-      });
+      try {
+        await registerGeneratedImageTask({
+          userId: authenticatedUserId,
+          taskId: task.taskId,
+          kind: "image-to-image",
+          prompt: imagePrompt,
+        });
+      } catch (error) {
+        console.error(
+          "Character image persistence is unavailable; continuing without R2:",
+          error instanceof Error ? error.message : "Unknown database error",
+        );
+      }
       return { taskId: task.taskId, kind: "image-to-image" as const };
     } catch (error) {
       console.error(

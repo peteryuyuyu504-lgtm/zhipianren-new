@@ -108,7 +108,7 @@ export async function submitImageToImage(
   prompt: string,
   imageUrl: string,
 ) {
-  const response = await requestApimart(apiKey, "/v1/images/generations", {
+  const response = await requestApimart(apiKey, "/v1/images/edits", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -116,8 +116,7 @@ export async function submitImageToImage(
         process.env.APIMART_IMAGE_TO_IMAGE_MODEL?.trim() ||
         DEFAULT_IMAGE_TO_IMAGE_MODEL,
       prompt,
-      image: [imageUrl],
-      size: "1:1",
+      image_urls: [imageUrl],
       n: 1,
     }),
   });

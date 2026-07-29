@@ -40,11 +40,18 @@ export async function GET(
   }
 
   try {
-    const registeredTask = await getGeneratedImageTask(userId, taskId);
-    if (!registeredTask) {
-      return NextResponse.json({ error: "图片任务不存在" }, { status: 404 });
+    let registeredTask:
+      | Awaited<ReturnType<typeof getGeneratedImageTask>>
+      | undefined;
+    try {
+      registeredTask = await getGeneratedImageTask(userId, taskId);
+    } catch (error) {
+      console.error(
+        "Generated image lookup is unavailable; using temporary image URL:",
+        error instanceof Error ? error.message : "Unknown database error",
+      );
     }
-    if (registeredTask.imageUrl) {
+    if (registeredTask?.imageUrl) {
       return NextResponse.json({
         taskId,
         status: "completed",
@@ -55,16 +62,23 @@ export async function GET(
 
     const task = await getImageTask(apiKey, taskId);
     const temporaryUrl = task.images[0]?.url;
-    if (task.status === "completed" && temporaryUrl) {
-      const permanentUrl = await persistCompletedTaskImage({
-        userId,
-        taskId,
-        temporaryUrl,
-      });
-      return NextResponse.json({
-        ...task,
-        images: [{ url: permanentUrl, expiresAt: null }],
-      });
+    if (task.status === "completed" && temporaryUrl && registeredTask) {
+      try {
+        const permanentUrl = await persistCompletedTaskImage({
+          userId,
+          taskId,
+          temporaryUrl,
+        });
+        return NextResponse.json({
+          ...task,
+          images: [{ url: permanentUrl, expiresAt: null }],
+        });
+      } catch (error) {
+        console.error(
+          "R2 image persistence failed; returning temporary image URL:",
+          error instanceof Error ? error.message : "Unknown R2 error",
+        );
+      }
     }
 
     return NextResponse.json(task);

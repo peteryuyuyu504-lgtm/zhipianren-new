@@ -105,12 +105,19 @@ export async function POST(request: Request) {
 
   try {
     const task = await submitImageToImage(apiKey, prompt, imageUrl);
-    await registerGeneratedImageTask({
-      userId,
-      taskId: task.taskId,
-      kind: "image-to-image",
-      prompt,
-    });
+    try {
+      await registerGeneratedImageTask({
+        userId,
+        taskId: task.taskId,
+        kind: "image-to-image",
+        prompt,
+      });
+    } catch (error) {
+      console.error(
+        "Image edit task persistence is unavailable; continuing without R2:",
+        error instanceof Error ? error.message : "Unknown database error",
+      );
+    }
 
     return NextResponse.json({
       ...task,

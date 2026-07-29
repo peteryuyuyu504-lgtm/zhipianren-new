@@ -68,7 +68,12 @@ async function requestApimart(
   }
 
   if (!response.ok) {
-    throw new Error(`APIMart ${path} request failed with status ${response.status}`);
+    const responseText = (await response.text()).slice(0, 500).trim();
+    throw new Error(
+      `APIMart ${path} request failed with status ${response.status}${
+        responseText ? `: ${responseText}` : ""
+      }`,
+    );
   }
 
   return response;
@@ -173,12 +178,26 @@ export async function submitCharacterSceneImage(
   character: Character,
   prompt: string,
 ) {
-  const referenceUrl = await uploadCharacterReference(apiKey, character);
+  let referenceUrl = await uploadCharacterReference(apiKey, character);
   try {
     return await submitImageToImage(apiKey, prompt, referenceUrl);
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : "Unknown submission error";
-    throw new Error(`Character image task submission failed: ${detail}`);
+  } catch (firstError) {
+    // APIMart 的参考图地址可能过期。清除旧缓存、重新上传并只重试一次，
+    // 避免一个过期地址让当前服务实例之后的所有角色生图都持续失败。
+    referenceImageCache.delete(character.id);
+
+    try {
+      referenceUrl = await uploadCharacterReference(apiKey, character);
+      return await submitImageToImage(apiKey, prompt, referenceUrl);
+    } catch (retryError) {
+      const firstDetail =
+        firstError instanceof Error ? firstError.message : "Unknown submission error";
+      const retryDetail =
+        retryError instanceof Error ? retryError.message : "Unknown retry error";
+      throw new Error(
+        `Character image task submission failed; retry with a fresh reference also failed. First: ${firstDetail}. Retry: ${retryDetail}`,
+      );
+    }
   }
 }
 

@@ -1,5 +1,7 @@
+import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { adminSessionCookie, isConfiguredAdmin } from "@/lib/admin-auth";
+import { sendWelcomeEmail } from "@/lib/email";
 import { createUserSessionValue, userSessionCookie } from "@/lib/user-session";
 import { getDb } from "@/src/db";
 import { users } from "@/src/db/schema";
@@ -74,17 +76,27 @@ export async function POST(request: Request) {
   }
 
   let userId: number;
+  let isNewUser = false;
   try {
     const db = getDb();
-    const [user] = await db
+    const [createdUser] = await db
       .insert(users)
       .values({ email })
-      .onConflictDoUpdate({
-        target: users.email,
-        set: { email },
-      })
+      .onConflictDoNothing({ target: users.email })
       .returning({ id: users.id });
-    userId = user.id;
+
+    if (createdUser) {
+      userId = createdUser.id;
+      isNewUser = true;
+    } else {
+      const [existingUser] = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.email, email))
+        .limit(1);
+      if (!existingUser) throw new Error("User record could not be loaded");
+      userId = existingUser.id;
+    }
   } catch (error) {
     console.error(
       "User session database request failed:",
@@ -94,6 +106,19 @@ export async function POST(request: Request) {
       { error: "登录服务暂时不可用，请稍后再试" },
       { status: 503 },
     );
+  }
+
+  if (isNewUser) {
+    try {
+      const userName = email.split("@")[0] || "朋友";
+      await sendWelcomeEmail(email, userName);
+    } catch (error) {
+      // 邮件服务不可用时不影响用户注册和登录。
+      console.error(
+        "Welcome email could not be sent:",
+        error instanceof Error ? error.message : "Unknown email error",
+      );
+    }
   }
 
   const response = NextResponse.json({ isAdmin: isConfiguredAdmin(email) });

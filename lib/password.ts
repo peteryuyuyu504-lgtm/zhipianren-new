@@ -1,0 +1,59 @@
+import {
+  createHash,
+  randomBytes,
+  scrypt as scryptCallback,
+  timingSafeEqual,
+} from "node:crypto";
+import { promisify } from "node:util";
+
+const scrypt = promisify(scryptCallback);
+const PASSWORD_KEY_LENGTH = 64;
+
+export async function hashPassword(password: string) {
+  const salt = randomBytes(16);
+  const derivedKey = (await scrypt(
+    password,
+    salt,
+    PASSWORD_KEY_LENGTH,
+  )) as Buffer;
+
+  return `scrypt$${salt.toString("base64url")}$${derivedKey.toString("base64url")}`;
+}
+
+export async function verifyPassword(password: string, storedHash: string) {
+  const [algorithm, encodedSalt, encodedKey] = storedHash.split("$");
+  if (algorithm !== "scrypt" || !encodedSalt || !encodedKey) return false;
+
+  try {
+    const salt = Buffer.from(encodedSalt, "base64url");
+    const expectedKey = Buffer.from(encodedKey, "base64url");
+    const actualKey = (await scrypt(
+      password,
+      salt,
+      expectedKey.length,
+    )) as Buffer;
+
+    return (
+      expectedKey.length === actualKey.length &&
+      timingSafeEqual(expectedKey, actualKey)
+    );
+  } catch {
+    return false;
+  }
+}
+
+export function createPasswordResetToken() {
+  const token = randomBytes(32).toString("base64url");
+  return {
+    token,
+    tokenHash: hashPasswordResetToken(token),
+  };
+}
+
+export function hashPasswordResetToken(token: string) {
+  return createHash("sha256").update(token).digest("hex");
+}
+
+export function isValidPassword(password: string) {
+  return password.length >= 8 && password.length <= 128;
+}

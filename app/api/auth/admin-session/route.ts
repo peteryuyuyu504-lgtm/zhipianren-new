@@ -2,6 +2,12 @@ import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { adminSessionCookie, isConfiguredAdmin } from "@/lib/admin-auth";
 import { sendWelcomeEmail } from "@/lib/email";
+import {
+  hashPassword,
+  isValidPassword,
+  verifyPassword,
+} from "@/lib/password";
+import { verifyTurnstileToken } from "@/lib/turnstile";
 import { createUserSessionValue, userSessionCookie } from "@/lib/user-session";
 import { getDb } from "@/src/db";
 import { users } from "@/src/db/schema";
@@ -9,54 +15,32 @@ import { users } from "@/src/db/schema";
 export async function POST(request: Request) {
   const body = (await request.json().catch(() => null)) as {
     email?: unknown;
+    password?: unknown;
     turnstileToken?: unknown;
   } | null;
   const email =
     typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
+  const password = typeof body?.password === "string" ? body.password : "";
   const turnstileToken =
     typeof body?.turnstileToken === "string" ? body.turnstileToken : "";
-  const turnstileSecretKey = process.env.TURNSTILE_SECRET_KEY?.trim();
 
-  if (!email || email.length > 255) {
-    return NextResponse.json({ error: "请输入有效邮箱" }, { status: 400 });
+  if (!email || email.length > 255 || !email.includes("@")) {
+    return NextResponse.json({ error: "请输入有效邮箱。" }, { status: 400 });
   }
-  if (!turnstileSecretKey) {
+  if (!isValidPassword(password)) {
     return NextResponse.json(
-      { error: "人机验证服务尚未配置，请联系网站管理员。" },
-      { status: 503 },
+      { error: "密码需要为 8～128 个字符。" },
+      { status: 400 },
     );
   }
 
-  if (!turnstileToken || turnstileToken.length > 2048) {
-    return NextResponse.json(
-      { error: "请先完成人机验证。" },
-      { status: 403 },
-    );
-  }
-
-  let turnstileVerified = false;
   try {
-    const verifyResponse = await fetch(
-      "https://challenges.cloudflare.com/turnstile/v0/siteverify",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          secret: turnstileSecretKey,
-          response: turnstileToken,
-        }),
-        signal: AbortSignal.timeout(8000),
-      },
-    );
-
-    if (!verifyResponse.ok) {
-      throw new Error(`Turnstile returned HTTP ${verifyResponse.status}`);
+    if (!(await verifyTurnstileToken(turnstileToken))) {
+      return NextResponse.json(
+        { error: "人机验证失败，请重新验证。" },
+        { status: 403 },
+      );
     }
-
-    const verifyResult = (await verifyResponse.json()) as {
-      success?: boolean;
-    };
-    turnstileVerified = verifyResult.success === true;
   } catch (error) {
     console.error(
       "Turnstile verification request failed:",
@@ -68,52 +52,68 @@ export async function POST(request: Request) {
     );
   }
 
-  if (!turnstileVerified) {
-    return NextResponse.json(
-      { error: "人机验证失败，请重新验证。" },
-      { status: 403 },
-    );
-  }
-
   let userId: number;
   let isNewUser = false;
   try {
     const db = getDb();
-    const [createdUser] = await db
-      .insert(users)
-      .values({ email })
-      .onConflictDoNothing({ target: users.email })
-      .returning({ id: users.id });
+    const [existingUser] = await db
+      .select({
+        id: users.id,
+        passwordHash: users.passwordHash,
+      })
+      .from(users)
+      .where(eq(users.email, email))
+      .limit(1);
 
-    if (createdUser) {
+    if (existingUser) {
+      if (!existingUser.passwordHash) {
+        return NextResponse.json(
+          {
+            error: "这个账号还没有设置密码，请点击“忘记密码”完成设置。",
+            code: "PASSWORD_SETUP_REQUIRED",
+          },
+          { status: 403 },
+        );
+      }
+      if (!(await verifyPassword(password, existingUser.passwordHash))) {
+        return NextResponse.json(
+          { error: "邮箱或密码不正确。" },
+          { status: 401 },
+        );
+      }
+      userId = existingUser.id;
+    } else {
+      const passwordHash = await hashPassword(password);
+      const [createdUser] = await db
+        .insert(users)
+        .values({ email, passwordHash })
+        .onConflictDoNothing({ target: users.email })
+        .returning({ id: users.id });
+
+      if (!createdUser) {
+        return NextResponse.json(
+          { error: "账号创建冲突，请重新登录。" },
+          { status: 409 },
+        );
+      }
       userId = createdUser.id;
       isNewUser = true;
-    } else {
-      const [existingUser] = await db
-        .select({ id: users.id })
-        .from(users)
-        .where(eq(users.email, email))
-        .limit(1);
-      if (!existingUser) throw new Error("User record could not be loaded");
-      userId = existingUser.id;
     }
   } catch (error) {
     console.error(
-      "User session database request failed:",
+      "User authentication database request failed:",
       error instanceof Error ? error.message : "Unknown database error",
     );
     return NextResponse.json(
-      { error: "登录服务暂时不可用，请稍后再试" },
+      { error: "登录服务暂时不可用，请稍后再试。" },
       { status: 503 },
     );
   }
 
   if (isNewUser) {
     try {
-      const userName = email.split("@")[0] || "朋友";
-      await sendWelcomeEmail(email, userName);
+      await sendWelcomeEmail(email, email.split("@")[0] || "朋友");
     } catch (error) {
-      // 邮件服务不可用时不影响用户注册和登录。
       console.error(
         "Welcome email could not be sent:",
         error instanceof Error ? error.message : "Unknown email error",
@@ -121,16 +121,15 @@ export async function POST(request: Request) {
     }
   }
 
-  const response = NextResponse.json({ isAdmin: isConfiguredAdmin(email) });
+  const isAdmin = isConfiguredAdmin(email);
+  const response = NextResponse.json({ isAdmin, isNewUser });
   response.cookies.set(
     userSessionCookie.name,
     createUserSessionValue(userId),
     userSessionCookie.options,
   );
 
-  if (isConfiguredAdmin(email)) {
-    // TODO: 当前项目只有 Mock 登录。接入真实认证后，必须改为服务端验证用户和角色，
-    // 并使用签名会话，不能继续相信客户端提交的邮箱。
+  if (isAdmin) {
     response.cookies.set(adminSessionCookie.name, adminSessionCookie.value, {
       httpOnly: true,
       sameSite: "lax",

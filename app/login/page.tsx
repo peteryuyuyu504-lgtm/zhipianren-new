@@ -1,8 +1,8 @@
 "use client";
 
 import { FormEvent, useState, useSyncExternalStore } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { validateMockLogin } from "@/lib/mock-login";
 import { hasMockLogin, saveMockLogin } from "@/lib/mock-auth";
 import { TeamSectionBlock } from "@/components/ui/team-section-block-shadcnui";
 import { Turnstile } from "@marsidev/react-turnstile";
@@ -53,23 +53,20 @@ export default function LoginPage() {
       return;
     }
 
-    const result = validateMockLogin(email, password);
-    setEmail(result.email);
+    const normalizedEmail = email.trim().toLowerCase();
+    setEmail(normalizedEmail);
     setError("");
 
-    if (!result.success && result.message === "密码至少需要 6 位") {
-      setError(result.message);
+    if (!normalizedEmail || !normalizedEmail.includes("@")) {
+      setError("请输入有效邮箱。");
+      return;
+    }
+    if (password.length < 8) {
+      setError("密码至少需要 8 个字符。");
       return;
     }
 
     setIsSubmitting(true);
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    if (!result.success) {
-      setError(result.message);
-      setIsSubmitting(false);
-      return;
-    }
 
     let adminSessionResponse: Response;
     let adminSession: { isAdmin?: boolean; error?: string };
@@ -78,7 +75,8 @@ export default function LoginPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: result.email,
+          email: normalizedEmail,
+          password,
           turnstileToken,
         }),
       });
@@ -170,13 +168,16 @@ export default function LoginPage() {
                 disabled={isSubmitting}
                 required
               />
-              <label htmlFor="login-password">密码</label>
+              <div className="login-password-heading">
+                <label htmlFor="login-password">密码</label>
+                <Link href="/forgot-password">忘记密码？</Link>
+              </div>
               <input
                 id="login-password"
                 type="password"
                 value={password}
                 onChange={(event) => updatePassword(event.target.value)}
-                placeholder="至少 6 位"
+                placeholder="至少 8 个字符"
                 disabled={isSubmitting}
                 required
               />

@@ -60,6 +60,48 @@ export async function sendWelcomeEmail(
   return data;
 }
 
+export async function sendPasswordResetEmail(
+  userEmail: string,
+  resetToken: string,
+) {
+  const apiKey = process.env.RESEND_API_KEY?.trim();
+  if (!apiKey) throw new Error("RESEND_API_KEY is not configured");
+
+  const configuredAppUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  const vercelProductionHost =
+    process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim();
+  const appUrl =
+    configuredAppUrl ||
+    (vercelProductionHost
+      ? `https://${vercelProductionHost}`
+      : "http://localhost:3000");
+  const resetUrl = `${appUrl.replace(/\/+$/, "")}/reset-password?token=${encodeURIComponent(resetToken)}`;
+
+  const resend = new Resend(apiKey);
+  const { data, error } = await resend.emails.send({
+    from: "纸片人男友 <onboarding@resend.dev>",
+    to: userEmail,
+    subject: "重置你的纸片人男友登录密码",
+    html: `
+      <div style="font-family: sans-serif; max-width: 520px; margin: 0 auto; color: #243247;">
+        <p style="font-size: 12px; letter-spacing: .12em; color: #7c8aa0;">PAPER BOYFRIEND · ACCOUNT</p>
+        <h2 style="margin: 20px 0 12px;">重新打开属于你的陪伴空间</h2>
+        <p style="line-height: 1.8;">我们收到了重置密码的请求。点击下面的按钮设置新密码，这个链接将在 30 分钟后失效。</p>
+        <p style="margin: 28px 0;">
+          <a href="${escapeHtml(resetUrl)}" style="display: inline-block; padding: 13px 22px; border-radius: 12px; background: #273e5d; color: #fff; text-decoration: none;">设置新密码</a>
+        </p>
+        <p style="line-height: 1.7; color: #7c8aa0; font-size: 13px;">如果不是你发起的请求，可以忽略这封邮件，你的密码不会改变。</p>
+      </div>
+    `,
+  });
+
+  if (error) {
+    throw new Error(`Password reset email could not be sent: ${error.message}`);
+  }
+
+  return data;
+}
+
 async function generateLoveLetter(userName: string) {
   const apiKey = process.env.OPENROUTER_API_KEY?.trim();
   if (!apiKey) throw new Error("OPENROUTER_API_KEY is not configured");

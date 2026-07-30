@@ -7,8 +7,13 @@ import { hashPassword, verifyPassword } from "@/lib/password";
 import { sendPasswordResetEmail, sendWelcomeEmail } from "@/lib/email";
 
 const turnstileSecret = process.env.TURNSTILE_SECRET_KEY?.trim();
+const vercelPreviewURL =
+  process.env.VERCEL_ENV === "preview" && process.env.VERCEL_URL
+    ? `https://${process.env.VERCEL_URL}`
+    : undefined;
 const configuredBaseURL =
   process.env.BETTER_AUTH_URL?.trim() ||
+  vercelPreviewURL ||
   process.env.NEXT_PUBLIC_APP_URL?.trim() ||
   (process.env.VERCEL_PROJECT_PRODUCTION_URL
     ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`

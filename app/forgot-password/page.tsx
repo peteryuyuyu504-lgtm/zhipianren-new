@@ -3,6 +3,7 @@
 import { FormEvent, useState } from "react";
 import Link from "next/link";
 import { Turnstile } from "@marsidev/react-turnstile";
+import { authClient } from "@/lib/auth-client";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -25,22 +26,24 @@ export default function ForgotPasswordPage() {
     setIsSubmitting(true);
     setFeedback("");
     try {
-      const response = await fetch("/api/auth/forgot-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, turnstileToken }),
-      });
-      const result = (await response.json()) as {
-        error?: string;
-        message?: string;
-      };
-      setIsError(!response.ok);
-      setFeedback(
-        response.ok
-          ? result.message || "重置邮件已发送，请检查收件箱。"
-          : result.error || "暂时无法发送重置邮件，请稍后再试。",
+      const result = await authClient.requestPasswordReset(
+        {
+          email: email.trim().toLowerCase(),
+          redirectTo: "/reset-password",
+        },
+        {
+          headers: {
+            "x-captcha-response": turnstileToken,
+          },
+        },
       );
-      if (!response.ok) {
+      setIsError(Boolean(result.error));
+      setFeedback(
+        result.error
+          ? result.error.message || "暂时无法发送重置邮件，请稍后再试。"
+          : "如果该邮箱已注册，重置邮件已经发出，请检查收件箱。",
+      );
+      if (result.error) {
         setTurnstileToken("");
         setTurnstileKey((current) => current + 1);
       }

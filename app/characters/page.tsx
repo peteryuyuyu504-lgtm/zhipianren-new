@@ -1,10 +1,10 @@
 import CharacterSelection from "@/components/character-selection";
-import MockAuthGuard from "@/components/mock-auth-guard";
+import AuthGuard from "@/components/auth-guard";
 
 export default function CharactersPage() {
   return (
-    <MockAuthGuard>
+    <AuthGuard>
       <CharacterSelection />
-    </MockAuthGuard>
+    </AuthGuard>
   );
 }

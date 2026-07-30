@@ -1,6 +1,5 @@
-import { cookies } from "next/headers";
-
-const ADMIN_COOKIE = "paper-boyfriend:admin";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
 
 function configuredAdminEmails() {
   return (process.env.ADMIN_EMAILS ?? "admin@example.com")
@@ -14,12 +13,8 @@ export function isConfiguredAdmin(email: string) {
 }
 
 export async function hasAdminSession() {
-  const cookieStore = await cookies();
-  return cookieStore.get(ADMIN_COOKIE)?.value === "mock-admin";
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
+  return Boolean(session?.user.email && isConfiguredAdmin(session.user.email));
 }
-
-export const adminSessionCookie = {
-  name: ADMIN_COOKIE,
-  value: "mock-admin",
-};
-

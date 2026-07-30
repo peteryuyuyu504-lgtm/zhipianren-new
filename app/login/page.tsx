@@ -1,15 +1,11 @@
 "use client";
 
-import { FormEvent, useState, useSyncExternalStore } from "react";
+import { FormEvent, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { hasMockLogin, saveMockLogin } from "@/lib/mock-auth";
 import { TeamSectionBlock } from "@/components/ui/team-section-block-shadcnui";
 import { Turnstile } from "@marsidev/react-turnstile";
-
-function subscribeToMockAuth() {
-  return () => {};
-}
+import { authClient } from "@/lib/auth-client";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -19,13 +15,6 @@ export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState("");
   const [turnstileKey, setTurnstileKey] = useState(0);
-  const [showLoginForm, setShowLoginForm] = useState(false);
-  const hasStoredLogin = useSyncExternalStore(
-    subscribeToMockAuth,
-    hasMockLogin,
-    () => false,
-  );
-  const hasActiveLogin = hasStoredLogin && !showLoginForm;
   const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
   function resetTurnstile() {
@@ -68,22 +57,28 @@ export default function LoginPage() {
 
     setIsSubmitting(true);
 
-    let adminSessionResponse: Response;
-    let adminSession: { isAdmin?: boolean; error?: string };
     try {
-      adminSessionResponse = await fetch("/api/auth/admin-session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const result = await authClient.signIn.email(
+        {
           email: normalizedEmail,
           password,
-          turnstileToken,
-        }),
-      });
-      adminSession = (await adminSessionResponse.json()) as {
-        isAdmin?: boolean;
-        error?: string;
-      };
+          callbackURL: "/characters",
+        },
+        {
+          headers: {
+            "x-captcha-response": turnstileToken,
+          },
+        },
+      );
+      if (result.error) {
+        setError(
+          result.error.message ||
+            "邮箱或密码不正确。如果这是旧账号，请先使用“忘记密码”设置新密码。",
+        );
+        resetTurnstile();
+        setIsSubmitting(false);
+        return;
+      }
     } catch {
       setError("登录服务暂时不可用，请稍后再试。");
       resetTurnstile();
@@ -91,28 +86,10 @@ export default function LoginPage() {
       return;
     }
 
-    if (!adminSessionResponse.ok) {
-      setError(adminSession.error || "登录服务暂时不可用，请稍后再试");
-      resetTurnstile();
-      setIsSubmitting(false);
-      return;
-    }
-
     const requestedPath = new URLSearchParams(window.location.search).get("next");
-    if (requestedPath === "/admin" && !adminSession.isAdmin) {
-      setError("这个邮箱不是管理员账号。请使用 admin@example.com 登录后台。");
-      setIsSubmitting(false);
-      return;
-    }
-
-    if (!saveMockLogin()) {
-      setError("浏览器无法保存登录状态，请允许本站使用本地存储。");
-      setIsSubmitting(false);
-      return;
-    }
-
     setIsSubmitting(false);
-    router.push(adminSession.isAdmin || requestedPath === "/admin" ? "/admin" : "/characters");
+    router.push(requestedPath === "/admin" ? "/admin" : "/characters");
+    router.refresh();
   }
 
    return (
@@ -141,23 +118,7 @@ export default function LoginPage() {
             <span>使用邮箱登录，选择喜欢的角色，继续属于你们的对话。</span>
           </header>
 
-          {hasActiveLogin ? (
-            <div className="login-session-return">
-              <strong>欢迎回来</strong>
-              <p>你的登录状态仍然有效，可以直接回到角色页面。</p>
-              <button type="button" onClick={() => router.push("/characters")}>
-                继续进入角色页面
-              </button>
-              <button
-                className="login-switch-account"
-                type="button"
-                onClick={() => setShowLoginForm(true)}
-              >
-                使用其他账号登录
-              </button>
-            </div>
-          ) : (
-            <form className="login-form" onSubmit={handleSubmit} noValidate autoComplete="off">
+          <form className="login-form" onSubmit={handleSubmit} noValidate autoComplete="off">
               <label htmlFor="login-email">邮箱</label>
               <input
                 id="login-email"
@@ -216,8 +177,7 @@ export default function LoginPage() {
                   {isSubmitting ? "正在进入..." : "进入陪伴空间"}
                 </button>
               </div>
-            </form>
-          )}
+          </form>
         </section>
       </div>
     </main>

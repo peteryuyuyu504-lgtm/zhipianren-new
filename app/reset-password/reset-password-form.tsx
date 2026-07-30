@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import Link from "next/link";
+import { authClient } from "@/lib/auth-client";
 
 export default function ResetPasswordForm({ token }: { token: string }) {
   const [password, setPassword] = useState("");
@@ -33,21 +34,16 @@ export default function ResetPasswordForm({ token }: { token: string }) {
     setIsSubmitting(true);
     setFeedback("");
     try {
-      const response = await fetch("/api/auth/reset-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, password }),
+      const result = await authClient.resetPassword({
+        token,
+        newPassword: password,
       });
-      const result = (await response.json()) as {
-        error?: string;
-        message?: string;
-      };
-      setIsError(!response.ok);
-      setIsComplete(response.ok);
+      setIsError(Boolean(result.error));
+      setIsComplete(!result.error);
       setFeedback(
-        response.ok
-          ? result.message || "密码已经更新。"
-          : result.error || "密码重置失败，请重新申请。",
+        result.error
+          ? result.error.message || "密码重置失败，请重新申请。"
+          : "密码已经更新。",
       );
     } catch {
       setIsError(true);

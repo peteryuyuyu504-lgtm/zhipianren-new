@@ -4,6 +4,7 @@ import { users } from "@/src/db/schema";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 const DEFAULT_OPENROUTER_MODEL = "xiaomi/mimo-v2.5";
+const DEFAULT_EMAIL_FROM = "纸片人男友 <hello@v-boyfriend.online>";
 
 type OpenRouterEmailResponse = {
   choices?: Array<{
@@ -27,6 +28,10 @@ function escapeHtml(value: string) {
   );
 }
 
+function getEmailFrom() {
+  return process.env.EMAIL_FROM?.trim() || DEFAULT_EMAIL_FROM;
+}
+
 export async function sendWelcomeEmail(
   userEmail = "peteryuyuyu504@gmail.com",
   userName = "朋友",
@@ -38,7 +43,7 @@ export async function sendWelcomeEmail(
   const resend = new Resend(apiKey);
   const safeUserName = escapeHtml(userName);
   const { data, error } = await resend.emails.send({
-    from: "纸片人男友 <onboarding@resend.dev>",
+    from: getEmailFrom(),
     to: userEmail,
     subject: "你好呀，我是你的专属男友 💌",
     html: `
@@ -62,24 +67,14 @@ export async function sendWelcomeEmail(
 
 export async function sendPasswordResetEmail(
   userEmail: string,
-  resetToken: string,
+  resetUrl: string,
 ) {
   const apiKey = process.env.RESEND_API_KEY?.trim();
   if (!apiKey) throw new Error("RESEND_API_KEY is not configured");
 
-  const configuredAppUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
-  const vercelProductionHost =
-    process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim();
-  const appUrl =
-    configuredAppUrl ||
-    (vercelProductionHost
-      ? `https://${vercelProductionHost}`
-      : "http://localhost:3000");
-  const resetUrl = `${appUrl.replace(/\/+$/, "")}/reset-password?token=${encodeURIComponent(resetToken)}`;
-
   const resend = new Resend(apiKey);
   const { data, error } = await resend.emails.send({
-    from: "纸片人男友 <onboarding@resend.dev>",
+    from: getEmailFrom(),
     to: userEmail,
     subject: "重置你的纸片人男友登录密码",
     html: `
@@ -166,7 +161,7 @@ export async function sendDailyLoveLetter(
 
   const resend = new Resend(resendApiKey);
   const { data, error } = await resend.emails.send({
-    from: "纸片人男友 <onboarding@resend.dev>",
+    from: getEmailFrom(),
     to: userEmail,
     subject: `早安 ${userName}，今天也想你了`,
     html: `

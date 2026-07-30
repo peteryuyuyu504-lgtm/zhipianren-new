@@ -1,10 +1,118 @@
-import { betterAuth } from "better-auth";
+import { betterAuth, type BetterAuthPlugin } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { captcha } from "better-auth/plugins";
 import { getDb } from "@/src/db";
 import * as schema from "@/src/db/schema";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { sendPasswordResetEmail, sendWelcomeEmail } from "@/lib/email";
+
+const TURNSTILE_VERIFY_URL =
+  "https://challenges.cloudflare.com/turnstile/v0/siteverify";
+const TURNSTILE_PROTECTED_ENDPOINTS = [
+  "/sign-in/email",
+  "/sign-up/email",
+  "/request-password-reset",
+];
+const TURNSTILE_MAX_ATTEMPTS = 3;
+const TURNSTILE_TIMEOUT_MS = 10_000;
+
+type TurnstileVerification = {
+  success?: boolean;
+};
+
+function middlewareError(message: string, code: string, status: number) {
+  return {
+    response: Response.json(
+      {
+        message,
+        code,
+      },
+      { status }
+    ),
+  };
+}
+
+function delay(milliseconds: number) {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+function resilientTurnstile(secretKey: string): BetterAuthPlugin {
+  return {
+    id: "resilient-turnstile",
+    onRequest: async (request, context) => {
+      const url = new URL(request.url);
+      const basePath = context.options.basePath ?? "/api/auth";
+      let pathname = url.pathname.replace(basePath, "");
+
+      if (pathname.endsWith("//")) pathname = pathname.slice(0, -1);
+      if (pathname.startsWith("//")) pathname = pathname.slice(1);
+      if (!pathname.startsWith("/")) pathname = `/${pathname}`;
+
+      const isProtectedEndpoint = TURNSTILE_PROTECTED_ENDPOINTS.some(
+        (endpoint) => pathname.includes(endpoint)
+      );
+      if (!isProtectedEndpoint) return;
+
+      const captchaResponse = request.headers.get("x-captcha-response");
+      if (!captchaResponse) {
+        return middlewareError(
+          "Missing CAPTCHA response",
+          "MISSING_CAPTCHA_RESPONSE",
+          400
+        );
+      }
+
+      for (let attempt = 1; attempt <= TURNSTILE_MAX_ATTEMPTS; attempt += 1) {
+        try {
+          const body = new URLSearchParams({
+            secret: secretKey,
+            response: captchaResponse,
+          });
+          const response = await fetch(TURNSTILE_VERIFY_URL, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body,
+            signal: AbortSignal.timeout(TURNSTILE_TIMEOUT_MS),
+          });
+
+          if (response.ok) {
+            const verification =
+              (await response.json()) as TurnstileVerification;
+
+            if (verification.success) return;
+
+            return middlewareError(
+              "Captcha verification failed",
+              "CAPTCHA_VERIFICATION_FAILED",
+              403
+            );
+          }
+
+          console.warn(
+            `Turnstile verification attempt ${attempt} returned HTTP ${response.status}`
+          );
+        } catch (error) {
+          console.warn(
+            `Turnstile verification attempt ${attempt} failed:`,
+            error instanceof Error ? error.message : "Unknown error"
+          );
+        }
+
+        if (attempt < TURNSTILE_MAX_ATTEMPTS) {
+          await delay(attempt * 300);
+        }
+      }
+
+      console.error("Turnstile verification unavailable after retries");
+      return middlewareError(
+        "Captcha service temporarily unavailable",
+        "CAPTCHA_SERVICE_UNAVAILABLE",
+        503
+      );
+    },
+  };
+}
 
 const turnstileSecret = process.env.TURNSTILE_SECRET_KEY?.trim();
 const vercelPreviewURL =
@@ -79,16 +187,6 @@ export const auth = betterAuth({
     },
   },
   plugins: turnstileSecret
-    ? [
-        captcha({
-          provider: "cloudflare-turnstile",
-          secretKey: turnstileSecret,
-          endpoints: [
-            "/sign-in/email",
-            "/sign-up/email",
-            "/request-password-reset",
-          ],
-        }),
-      ]
+    ? [resilientTurnstile(turnstileSecret)]
     : [],
 });

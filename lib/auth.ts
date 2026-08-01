@@ -17,6 +17,7 @@ const TURNSTILE_TIMEOUT_MS = 10_000;
 
 type TurnstileVerification = {
   success?: boolean;
+  "error-codes"?: string[];
 };
 
 function middlewareError(message: string, code: string, status: number) {
@@ -61,11 +62,14 @@ function resilientTurnstile(secretKey: string): BetterAuthPlugin {
         );
       }
 
+      const idempotencyKey = crypto.randomUUID();
+
       for (let attempt = 1; attempt <= TURNSTILE_MAX_ATTEMPTS; attempt += 1) {
         try {
           const body = new URLSearchParams({
             secret: secretKey,
             response: captchaResponse,
+            idempotency_key: idempotencyKey,
           });
           const response = await fetch(TURNSTILE_VERIFY_URL, {
             method: "POST",
@@ -76,22 +80,27 @@ function resilientTurnstile(secretKey: string): BetterAuthPlugin {
             signal: AbortSignal.timeout(TURNSTILE_TIMEOUT_MS),
           });
 
-          if (response.ok) {
-            const verification =
-              (await response.json()) as TurnstileVerification;
+          const verification =
+            (await response.json()) as TurnstileVerification;
+          const errorCodes = verification["error-codes"] ?? [];
 
-            if (verification.success) return;
+          if (verification.success) return;
 
+          if (errorCodes.includes("internal-error")) {
+            console.warn(
+              `Turnstile verification attempt ${attempt} returned internal-error`
+            );
+          } else {
+            console.error("Turnstile verification rejected:", {
+              httpStatus: response.status,
+              errorCodes,
+            });
             return middlewareError(
               "Captcha verification failed",
               "CAPTCHA_VERIFICATION_FAILED",
               403
             );
           }
-
-          console.warn(
-            `Turnstile verification attempt ${attempt} returned HTTP ${response.status}`
-          );
         } catch (error) {
           console.warn(
             `Turnstile verification attempt ${attempt} failed:`,

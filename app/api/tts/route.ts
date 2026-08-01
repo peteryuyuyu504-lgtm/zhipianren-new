@@ -60,7 +60,11 @@ export async function POST(request: Request) {
         "Content-Length": String(audio.byteLength),
       },
     });
-  } catch {
+  } catch (error) {
+    console.error(
+      "[TTS] Speech synthesis failed:",
+      error instanceof Error ? error.message : "Unknown error",
+    );
     return NextResponse.json(
       { error: "语音生成失败，请稍后重试" },
       { status: 503 },

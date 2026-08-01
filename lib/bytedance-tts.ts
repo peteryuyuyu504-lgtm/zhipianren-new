@@ -11,6 +11,29 @@ type TtsChunk = {
   data?: string;
 };
 
+function describeProviderError(rawResponse: string) {
+  const trimmed = rawResponse.trim();
+  if (!trimmed) return "empty response body";
+
+  try {
+    const payload = JSON.parse(trimmed) as {
+      code?: unknown;
+      message?: unknown;
+    };
+    const code =
+      typeof payload.code === "number" || typeof payload.code === "string"
+        ? String(payload.code)
+        : "unknown";
+    const message =
+      typeof payload.message === "string"
+        ? payload.message.replace(/\s+/g, " ").slice(0, 300)
+        : "unknown error";
+    return `code=${code}, message=${message}`;
+  } catch {
+    return trimmed.replace(/\s+/g, " ").slice(0, 300);
+  }
+}
+
 type CharacterVoice = {
   speaker: string;
   speechRate: number;
@@ -19,7 +42,7 @@ type CharacterVoice = {
 
 const CHARACTER_SPEAKERS: Record<
   string,
-  CharacterVoice & { envName: string }
+  CharacterVoice & { envName: string; useEnvironmentOverride?: boolean }
 > = {
   "shen-qingzhou": {
     envName: "BYTEDANCE_TTS_SPEAKER_SHEN_QINGZHOU",
@@ -43,6 +66,9 @@ const CHARACTER_SPEAKERS: Record<
     envName: "BYTEDANCE_TTS_SPEAKER_GU_WENSHEN",
     speaker: "zh_male_ruyayichen_uranus_bigtts",
     speechRate: -12,
+    // This built-in Seed-TTS 2.0 voice is verified for Gu Wenshen. Keeping it
+    // stable prevents an outdated production override from breaking playback.
+    useEnvironmentOverride: false,
     styleInstruction:
       "成熟清冷、低声克制，带一点神秘和诗意；像私人调香师近距离说话，句间有自然留白，不要播音腔，不要热情外放。",
   },
@@ -57,8 +83,12 @@ export function getCharacterVoice(characterId: string): CharacterVoice {
       styleInstruction: "自然、亲近，像真实聊天。",
     };
   }
+  const environmentSpeaker =
+    config.useEnvironmentOverride === false
+      ? ""
+      : process.env[config.envName]?.trim();
   return {
-    speaker: process.env[config.envName]?.trim() || config.speaker,
+    speaker: environmentSpeaker || config.speaker,
     speechRate: config.speechRate,
     styleInstruction: config.styleInstruction,
   };
@@ -162,11 +192,14 @@ export async function synthesizeSpeech(
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
 
+  const rawResponse = await response.text();
   if (!response.ok) {
-    throw new Error(`ByteDance TTS request failed with status ${response.status}`);
+    throw new Error(
+      `ByteDance TTS HTTP ${response.status}: ${describeProviderError(rawResponse)}`,
+    );
   }
 
-  const chunks = parseJsonChunks(await response.text());
+  const chunks = parseJsonChunks(rawResponse);
   const audioParts: Buffer[] = [];
   let totalBytes = 0;
 
@@ -176,7 +209,10 @@ export async function synthesizeSpeech(
       chunk.code !== 0 &&
       chunk.code !== 20_000_000
     ) {
-      throw new Error("ByteDance TTS returned an unsuccessful chunk");
+      const message = chunk.message?.replace(/\s+/g, " ").slice(0, 300);
+      throw new Error(
+        `ByteDance TTS failed with code ${chunk.code}${message ? `: ${message}` : ""}`,
+      );
     }
     if (!chunk.data) continue;
 

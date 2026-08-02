@@ -101,6 +101,31 @@ export const authVerifications = pgTable(
   ],
 );
 
+export const passkey = pgTable(
+  "passkey",
+  {
+    id: serial("id").primaryKey(),
+    name: text("name"),
+    publicKey: text("public_key").notNull(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    credentialID: text("credential_id").notNull(),
+    counter: integer("counter").notNull(),
+    deviceType: text("device_type").notNull(),
+    backedUp: boolean("backed_up").notNull(),
+    transports: text("transports"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    aaguid: text("aaguid"),
+  },
+  (table) => [
+    index("passkey_user_id_idx").on(table.userId),
+    uniqueIndex("passkey_credential_id_unique").on(table.credentialID),
+  ],
+);
+
 export const dailyChatUsage = pgTable(
   "daily_chat_usage",
   {

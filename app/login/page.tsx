@@ -14,7 +14,7 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeSocialProvider, setActiveSocialProvider] = useState<
-    "google" | "github" | null
+    "google" | "github" | "passkey" | null
   >(null);
   const [turnstileToken, setTurnstileToken] = useState("");
   const [turnstileKey, setTurnstileKey] = useState(0);
@@ -119,6 +119,35 @@ export default function LoginPage() {
     } catch {
       const providerName = provider === "google" ? "Google" : "GitHub";
       setError(`${providerName} 登录暂时不可用，请稍后再试。`);
+      setActiveSocialProvider(null);
+    }
+  }
+
+  async function handlePasskeySignIn() {
+    if (isSubmitting || activeSocialProvider) return;
+
+    setError("");
+    setActiveSocialProvider("passkey");
+
+    try {
+      const result = await authClient.signIn.passkey();
+
+      if (result.error) {
+        setError(
+          result.error.message ||
+            "通行密钥登录没有完成，请确认此设备已经注册过通行密钥。",
+        );
+        setActiveSocialProvider(null);
+        return;
+      }
+
+      const requestedPath = new URLSearchParams(window.location.search).get(
+        "next",
+      );
+      router.push(requestedPath === "/admin" ? "/admin" : "/characters");
+      router.refresh();
+    } catch {
+      setError("通行密钥登录没有完成，请稍后重试。");
       setActiveSocialProvider(null);
     }
   }
@@ -256,6 +285,24 @@ export default function LoginPage() {
               </svg>
               <span>
                 {activeSocialProvider === "github" ? "正在前往..." : "GitHub"}
+              </span>
+            </button>
+            <button
+              className="login-social-button"
+              type="button"
+              onClick={() => void handlePasskeySignIn()}
+              disabled={isSubmitting || activeSocialProvider !== null}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  fill="currentColor"
+                  d="M7.5 14a5.5 5.5 0 1 1 4.79-2.8L22 11.2V15h-2.5v2.5H17V20h-4v-4.29A5.48 5.48 0 0 1 7.5 14Zm0-3A2.5 2.5 0 1 0 7.5 6a2.5 2.5 0 0 0 0 5Z"
+                />
+              </svg>
+              <span>
+                {activeSocialProvider === "passkey"
+                  ? "正在验证..."
+                  : "通行密钥"}
               </span>
             </button>
           </div>

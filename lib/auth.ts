@@ -1,4 +1,5 @@
 import { betterAuth, type BetterAuthPlugin } from "better-auth";
+import { passkey } from "@better-auth/passkey";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { getDb } from "@/src/db";
 import * as schema from "@/src/db/schema";
@@ -219,7 +220,10 @@ export const auth = betterAuth({
       },
     },
   },
-  plugins: turnstileSecret
-    ? [resilientTurnstile(turnstileSecret)]
-    : [],
+  plugins: [
+    ...(turnstileSecret ? [resilientTurnstile(turnstileSecret)] : []),
+    passkey({
+      rpName: "纸片人男友",
+    }),
+  ],
 });

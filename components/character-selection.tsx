@@ -10,10 +10,15 @@ export default function CharacterSelection() {
 
       <section className="selection-shell">
         <nav className="selection-topbar" aria-label="页面导航">
-          <Link className="selection-login-link" href="/login">
-            <span aria-hidden="true">←</span>
-            返回首页
-          </Link>
+          <div className="selection-nav-actions">
+            <Link className="selection-login-link" href="/login">
+              <span aria-hidden="true">←</span>
+              返回首页
+            </Link>
+            <Link className="selection-login-link" href="/account/security">
+              账号安全
+            </Link>
+          </div>
           <span className="selection-brand">纸片人男友 · ONLINE</span>
         </nav>
 

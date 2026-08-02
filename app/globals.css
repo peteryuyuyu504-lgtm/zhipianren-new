@@ -2705,7 +2705,13 @@ a {
   content: "";
 }
 
-.login-google-button {
+.login-social-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.login-social-button {
   display: flex;
   width: 100%;
   min-height: 48px;
@@ -2723,27 +2729,33 @@ a {
     transform 160ms ease, background 160ms ease;
 }
 
-.login-google-button svg {
+.login-social-button svg {
   width: 20px;
   height: 20px;
   flex: 0 0 auto;
 }
 
-.login-google-button:hover:not(:disabled) {
+.login-social-button:hover:not(:disabled) {
   border-color: rgba(87, 149, 47, 0.48);
   background: #fff;
   box-shadow: 0 10px 26px rgba(70, 111, 48, 0.1);
   transform: translateY(-1px);
 }
 
-.login-google-button:focus-visible {
+.login-social-button:focus-visible {
   outline: 3px solid rgba(143, 209, 79, 0.22);
   outline-offset: 3px;
 }
 
-.login-google-button:disabled {
+.login-social-button:disabled {
   cursor: wait;
   opacity: 0.55;
+}
+
+@media (max-width: 420px) {
+  .login-social-actions {
+    grid-template-columns: 1fr;
+  }
 }
 
 .login-actions .register-placeholder {

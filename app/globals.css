@@ -2688,6 +2688,64 @@ a {
   background: #7cc23f;
 }
 
+.login-social-divider {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+  margin: 22px 0 14px;
+  color: #96a090;
+  font-size: 11px;
+}
+
+.login-social-divider::before,
+.login-social-divider::after {
+  height: 1px;
+  background: rgba(104, 164, 68, 0.18);
+  content: "";
+}
+
+.login-google-button {
+  display: flex;
+  width: 100%;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  gap: 11px;
+  border: 1px solid rgba(104, 164, 68, 0.25);
+  border-radius: 13px;
+  color: #3e5037;
+  background: rgba(251, 253, 249, 0.94);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  transition: border-color 160ms ease, box-shadow 160ms ease,
+    transform 160ms ease, background 160ms ease;
+}
+
+.login-google-button svg {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+}
+
+.login-google-button:hover:not(:disabled) {
+  border-color: rgba(87, 149, 47, 0.48);
+  background: #fff;
+  box-shadow: 0 10px 26px rgba(70, 111, 48, 0.1);
+  transform: translateY(-1px);
+}
+
+.login-google-button:focus-visible {
+  outline: 3px solid rgba(143, 209, 79, 0.22);
+  outline-offset: 3px;
+}
+
+.login-google-button:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
 .login-actions .register-placeholder {
   color: #5b853f;
   border-color: rgba(104, 164, 68, 0.28);

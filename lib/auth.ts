@@ -124,6 +124,8 @@ function resilientTurnstile(secretKey: string): BetterAuthPlugin {
 }
 
 const turnstileSecret = process.env.TURNSTILE_SECRET_KEY?.trim();
+const googleClientId = process.env.GOOGLE_CLIENT_ID?.trim();
+const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET?.trim();
 const vercelPreviewURL =
   process.env.VERCEL_ENV === "preview" && process.env.VERCEL_URL
     ? `https://${process.env.VERCEL_URL}`
@@ -146,6 +148,16 @@ export const auth = betterAuth({
     process.env.BETTER_AUTH_SECRET?.trim() ||
     process.env.AUTH_SESSION_SECRET?.trim(),
   baseURL: configuredBaseURL,
+  socialProviders:
+    googleClientId && googleClientSecret
+      ? {
+          google: {
+            clientId: googleClientId,
+            clientSecret: googleClientSecret,
+            prompt: "select_account",
+          },
+        }
+      : {},
   user: {
     modelName: "users",
     fields: {

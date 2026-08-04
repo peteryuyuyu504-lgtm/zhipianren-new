@@ -5,6 +5,7 @@ import { getDb } from "@/src/db";
 import * as schema from "@/src/db/schema";
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { sendPasswordResetEmail, sendWelcomeEmail } from "@/lib/email";
+import { sendWelcomeEmailAfterUserCreate } from "@/lib/welcome-email";
 
 const TURNSTILE_VERIFY_URL =
   "https://challenges.cloudflare.com/turnstile/v0/siteverify";
@@ -211,11 +212,7 @@ export const auth = betterAuth({
     user: {
       create: {
         after: async (user) => {
-          try {
-            await sendWelcomeEmail(user.email, user.name);
-          } catch (error) {
-            console.error("欢迎邮件发送失败：", error);
-          }
+          await sendWelcomeEmailAfterUserCreate(user, sendWelcomeEmail);
         },
       },
     },

@@ -1,4 +1,5 @@
 import { betterAuth, type BetterAuthPlugin } from "better-auth";
+import { APIError } from "better-auth/api";
 import { passkey } from "@better-auth/passkey";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { getDb } from "@/src/db";
@@ -210,6 +211,28 @@ export const auth = betterAuth({
   databaseHooks: {
     user: {
       create: {
+        before: async (user) => {
+          const normalizedEmail = user.email.trim().toLowerCase();
+          const normalizedName = user.name.trim();
+          const fallbackName =
+            normalizedEmail.split("@")[0]?.trim() || "陪伴用户";
+          const safeName = (normalizedName || fallbackName).slice(0, 50);
+
+          if (normalizedName.length > 50) {
+            throw APIError.from("BAD_REQUEST", {
+              code: "INVALID_NICKNAME",
+              message: "昵称不能超过 50 个字符。",
+            });
+          }
+
+          return {
+            data: {
+              ...user,
+              email: normalizedEmail,
+              name: safeName,
+            },
+          };
+        },
         after: async (user) => {
           try {
             await sendWelcomeEmail(user.email, user.name);

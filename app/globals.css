@@ -3385,6 +3385,156 @@ a {
   box-shadow: 0 24px 70px rgba(70, 111, 48, 0.14);
 }
 
+/* 注册页沿用登录页的认证卡片，只为更长的表单补充字段状态与滚动。 */
+.register-page {
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.register-page .login-shell {
+  align-items: start;
+}
+
+.register-page .login-intro-panel {
+  min-height: 610px;
+}
+
+.register-page .login-card {
+  max-width: 520px;
+}
+
+.register-form {
+  gap: 14px;
+}
+
+.register-field {
+  display: grid;
+  gap: 8px;
+}
+
+.register-form label {
+  margin: 0;
+}
+
+.register-form label span {
+  color: #8a9783;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.register-form input {
+  min-height: 48px;
+  margin: 0;
+}
+
+.register-form input[aria-invalid="true"] {
+  border-color: #c77764;
+  box-shadow: 0 0 0 3px rgba(199, 119, 100, 0.11);
+}
+
+.register-field-error {
+  margin: -2px 0 0;
+  color: #a34f43;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.register-turnstile {
+  display: grid;
+  gap: 8px;
+  min-height: 70px;
+  margin-top: 1px;
+}
+
+.register-captcha-label {
+  margin: 0;
+  color: #4b5848;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.register-turnstile .login-feedback {
+  min-height: 0;
+  margin: 0;
+}
+
+.register-form-feedback {
+  min-height: 0;
+  margin: 0;
+}
+
+.register-social-note {
+  margin: 10px 0 0;
+  color: #889583;
+  font-size: 11px;
+  line-height: 1.6;
+  text-align: center;
+}
+
+.login-register-link {
+  margin-top: 17px;
+  color: #657e5a;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.login-help-link {
+  margin-top: 12px;
+  color: #98a591;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.login-link-copy {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.login-link-question {
+  color: inherit;
+}
+
+.login-link-action {
+  color: #668758;
+  font-weight: 800;
+}
+
+.login-register-link .login-link-action {
+  color: #3f6d31;
+}
+
+.login-help-link .login-link-action {
+  color: #718b66;
+}
+
+.login-register-link > span:last-child {
+  font-size: 18px;
+}
+
+.login-help-link > span:last-child {
+  color: #a4c991;
+  font-size: 15px;
+}
+
+.login-contact-link:hover .login-link-action {
+  color: #365f2c;
+}
+
+.register-return-link {
+  margin-top: 14px;
+}
+
+@media (max-width: 860px) {
+  .register-page .login-intro-panel {
+    min-height: auto;
+  }
+
+  .register-page .login-card {
+    max-width: none;
+  }
+}
+
 .status-dot,
 .online-dot,
 .availability-badge i {

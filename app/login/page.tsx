@@ -152,7 +152,7 @@ export default function LoginPage() {
     }
   }
 
-   return (
+  return (
     <main className="login-page">
       <div className="login-motion-orbs" aria-hidden="true">
         <i /><i /><i />
@@ -306,8 +306,18 @@ export default function LoginPage() {
               </span>
             </button>
           </div>
-          <Link className="login-contact-link" href="/contact">
-            <span>遇到问题？联系我们</span>
+          <Link className="login-contact-link login-register-link" href="/register">
+            <span className="login-link-copy">
+              <span className="login-link-question">还没有账号？</span>
+              <strong className="login-link-action">立即注册</strong>
+            </span>
+            <span aria-hidden="true">→</span>
+          </Link>
+          <Link className="login-contact-link login-help-link" href="/contact">
+            <span className="login-link-copy">
+              <span className="login-link-question">遇到问题？</span>
+              <strong className="login-link-action">联系我们</strong>
+            </span>
             <span aria-hidden="true">→</span>
           </Link>
         </section>

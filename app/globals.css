@@ -864,6 +864,425 @@ a {
   }
 }
 
+/* 联系页沿用登录页的纸张底色与苹果绿强调色，保持入口与落地页的视觉连续性。 */
+.login-contact-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 24px;
+  color: #6f8764;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  transition: color 160ms ease, transform 160ms ease;
+}
+
+.login-contact-link span:last-child {
+  color: #8fd14f;
+  font-size: 16px;
+  line-height: 1;
+  transition: transform 160ms ease;
+}
+
+.login-contact-link:hover {
+  color: #477331;
+}
+
+.login-contact-link:hover span:last-child {
+  transform: translateX(3px);
+}
+
+.login-contact-link:focus-visible,
+.contact-email-link:focus-visible,
+.contact-back-link:focus-visible {
+  border-radius: 10px;
+  outline: 3px solid rgba(143, 209, 79, 0.3);
+  outline-offset: 4px;
+}
+
+.contact-page {
+  position: relative;
+  display: grid;
+  min-height: 100svh;
+  place-items: center;
+  overflow: hidden;
+  padding: clamp(18px, 4vw, 54px);
+  background:
+    radial-gradient(circle at 14% 18%, rgba(143, 209, 79, 0.2), transparent 28%),
+    radial-gradient(circle at 86% 82%, rgba(102, 176, 67, 0.1), transparent 30%),
+    #f6faf2;
+}
+
+.contact-motion-orbs {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.contact-motion-orbs i {
+  position: absolute;
+  display: block;
+  border-radius: 50%;
+  opacity: 0.42;
+  animation: login-orb-drift 18s ease-in-out infinite alternate;
+}
+
+.contact-motion-orbs i:first-child {
+  top: -18%;
+  left: -10%;
+  width: min(42vw, 560px);
+  aspect-ratio: 1;
+  background: radial-gradient(circle, rgba(143, 209, 79, 0.3), transparent 68%);
+}
+
+.contact-motion-orbs i:last-child {
+  right: -12%;
+  bottom: -20%;
+  width: min(46vw, 620px);
+  aspect-ratio: 1;
+  background: radial-gradient(circle, rgba(92, 158, 116, 0.18), transparent 68%);
+  animation-delay: -7s;
+  animation-duration: 22s;
+}
+
+.contact-card {
+  position: relative;
+  z-index: 1;
+  width: min(650px, 100%);
+  padding: clamp(34px, 6vw, 64px);
+  border: 1px solid rgba(104, 164, 68, 0.2);
+  border-radius: 34px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.88), rgba(246, 251, 241, 0.94)),
+    rgba(255, 255, 255, 0.92);
+  box-shadow: 0 30px 90px rgba(70, 111, 48, 0.14);
+  text-align: center;
+  animation: contact-card-arrive 620ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.contact-icon {
+  display: grid;
+  width: 68px;
+  height: 68px;
+  place-items: center;
+  margin: 0 auto 22px;
+  border: 1px solid rgba(104, 164, 68, 0.22);
+  border-radius: 22px;
+  color: #477331;
+  background: linear-gradient(145deg, #eff8e8, #dff2cd);
+  box-shadow: 0 16px 30px rgba(106, 164, 68, 0.16);
+}
+
+.contact-icon svg,
+.contact-email-icon svg,
+.contact-clock-icon svg {
+  width: 30px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
+}
+
+.contact-eyebrow {
+  margin: 0 0 10px;
+  color: #57952f;
+  font-family: "Segoe UI", "PingFang SC", sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.17em;
+}
+
+.contact-card h1 {
+  margin: 0;
+  color: #253223;
+  font-family: "STSong", "SimSun", serif;
+  font-size: clamp(38px, 7vw, 58px);
+  font-weight: 600;
+  letter-spacing: -0.07em;
+  line-height: 1.15;
+}
+
+.contact-description {
+  max-width: 500px;
+  margin: 18px auto 0;
+  color: #6d796a;
+  font-size: 15px;
+  line-height: 1.9;
+}
+
+.contact-divider {
+  height: 1px;
+  margin: 28px 0 24px;
+  background: rgba(104, 164, 68, 0.16);
+}
+
+.contact-label {
+  margin: 0 0 12px;
+  color: #6f806b;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: left;
+}
+
+.contact-email-link {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 15px;
+  padding: 17px 18px;
+  border: 1px solid rgba(104, 164, 68, 0.24);
+  border-radius: 18px;
+  color: #365a2b;
+  background: rgba(248, 252, 244, 0.9);
+  text-align: left;
+  transition: border-color 180ms ease, background 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.contact-email-link:hover {
+  border-color: rgba(104, 164, 68, 0.48);
+  background: #fff;
+  box-shadow: 0 14px 30px rgba(70, 111, 48, 0.11);
+  transform: translateY(-2px);
+}
+
+.contact-email-icon {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 1px solid rgba(104, 164, 68, 0.22);
+  border-radius: 14px;
+  color: #477331;
+  background: #eff8e8;
+}
+
+.contact-email-icon svg {
+  width: 23px;
+}
+
+.contact-email-copy {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.contact-email-copy strong {
+  overflow-wrap: anywhere;
+  color: #365a2b;
+  font-size: clamp(13px, 2.5vw, 17px);
+  font-weight: 800;
+}
+
+.contact-email-copy span {
+  color: #81907b;
+  font-size: 12px;
+}
+
+.contact-arrow {
+  color: #7fae58;
+  font-size: 26px;
+  line-height: 1;
+  transition: transform 180ms ease;
+}
+
+.contact-email-link:hover .contact-arrow {
+  transform: translateX(4px);
+}
+
+.contact-copy-area {
+  display: grid;
+  gap: 5px;
+  margin-top: 10px;
+}
+
+.contact-copy-button {
+  display: flex;
+  min-height: 46px;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  width: 100%;
+  border: 1px solid rgba(104, 164, 68, 0.2);
+  border-radius: 14px;
+  color: #547346;
+  background: rgba(255, 255, 255, 0.55);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  transition: border-color 180ms ease, background 180ms ease, color 180ms ease,
+    transform 180ms ease;
+}
+
+.contact-copy-button > span:first-child {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border-radius: 7px;
+  color: #6d9a4b;
+  background: #eff8e8;
+  font-size: 15px;
+  line-height: 1;
+}
+
+.contact-copy-button:hover {
+  border-color: rgba(104, 164, 68, 0.4);
+  color: #477331;
+  background: #fff;
+  transform: translateY(-1px);
+}
+
+.contact-copy-button.is-copied {
+  border-color: rgba(104, 164, 68, 0.34);
+  color: #477331;
+  background: #eff8e8;
+}
+
+.contact-copy-button:focus-visible {
+  border-radius: 14px;
+  outline: 3px solid rgba(143, 209, 79, 0.3);
+  outline-offset: 3px;
+}
+
+.contact-copy-status {
+  min-height: 16px;
+  margin: 0;
+  color: #a34f43;
+  font-size: 11px;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.contact-response-time {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 14px 16px;
+  border: 1px solid rgba(104, 164, 68, 0.14);
+  border-radius: 15px;
+  color: #6f806b;
+  background: rgba(239, 248, 232, 0.62);
+  font-size: 12px;
+  text-align: left;
+}
+
+.contact-clock-icon {
+  display: grid;
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  color: #6d9a4b;
+}
+
+.contact-clock-icon svg {
+  width: 22px;
+}
+
+.contact-divider-bottom {
+  margin: 28px 0 20px;
+}
+
+.contact-back-link {
+  display: flex;
+  min-height: 50px;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  border: 1px solid rgba(104, 164, 68, 0.2);
+  border-radius: 14px;
+  color: #547346;
+  background: rgba(255, 255, 255, 0.46);
+  font-size: 13px;
+  font-weight: 700;
+  transition: border-color 180ms ease, background 180ms ease, transform 180ms ease;
+}
+
+.contact-back-link span:first-child {
+  color: #7fae58;
+  font-size: 21px;
+  line-height: 1;
+  transition: transform 180ms ease;
+}
+
+.contact-back-link:hover {
+  border-color: rgba(104, 164, 68, 0.4);
+  background: #fff;
+  transform: translateY(-1px);
+}
+
+.contact-back-link:hover span:first-child {
+  transform: translateX(-3px);
+}
+
+@keyframes contact-card-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 520px) {
+  .contact-page {
+    align-items: start;
+    padding: 14px;
+  }
+
+  .contact-card {
+    margin: auto 0;
+    padding: 30px 22px;
+    border-radius: 26px;
+  }
+
+  .contact-description {
+    font-size: 14px;
+  }
+
+  .contact-email-link {
+    gap: 11px;
+    padding: 14px 12px;
+  }
+
+  .contact-email-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .contact-email-copy strong {
+    font-size: 12px;
+  }
+
+  .contact-email-copy span {
+    font-size: 11px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .contact-motion-orbs i,
+  .contact-card {
+    animation: none;
+  }
+
+  .login-contact-link,
+  .login-contact-link span:last-child,
+  .contact-email-link,
+  .contact-arrow,
+  .contact-back-link,
+  .contact-back-link span:first-child {
+    transition: none;
+  }
+}
+
 .selection-topbar {
   position: relative;
   z-index: 3;

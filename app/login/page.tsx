@@ -306,6 +306,10 @@ export default function LoginPage() {
               </span>
             </button>
           </div>
+          <Link className="login-contact-link" href="/contact">
+            <span>遇到问题？联系我们</span>
+            <span aria-hidden="true">→</span>
+          </Link>
         </section>
       </div>
     </main>

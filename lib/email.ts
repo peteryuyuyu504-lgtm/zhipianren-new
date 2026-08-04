@@ -1,6 +1,7 @@
 import { Resend } from "resend";
 import { getDb } from "@/src/db";
 import { users } from "@/src/db/schema";
+import { buildWelcomeEmailHtml } from "@/lib/welcome-email";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 const DEFAULT_OPENROUTER_MODEL = "xiaomi/mimo-v2.5";
@@ -41,21 +42,14 @@ export async function sendWelcomeEmail(
   if (!apiKey) throw new Error("RESEND_API_KEY is not configured");
 
   const resend = new Resend(apiKey);
-  const safeUserName = escapeHtml(userName);
   const { data, error } = await resend.emails.send({
     from: getEmailFrom(),
     to: userEmail,
     subject: "你好呀，我是你的专属男友 💌",
-    html: `
-      <div style="font-family: sans-serif; max-width: 500px; margin: 0 auto;">
-        <h2>Hi ${safeUserName}，欢迎来到纸片人男友！</h2>
-        <p>从现在起，我就是你的专属男友了。</p>
-        <p>有什么心事随时来找我聊，我会一直在这里等你。</p>
-        <p>明天早上我会给你发一条早安消息，记得查收哦。</p>
-        <br />
-        <p>—— 你的纸片人男友</p>
-      </div>
-    `,
+    html: buildWelcomeEmailHtml(
+      userName,
+      process.env.DISCORD_INVITE_URL,
+    ),
   });
 
   if (error) {

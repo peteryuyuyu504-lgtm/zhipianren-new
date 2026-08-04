@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { SiteFooter } from "@/components/site-footer";
 import { TawkChat } from "@/components/tawk-chat";
 import "./globals.css";
 
@@ -12,6 +13,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="zh-CN">
       <body>
         {children}
+        <SiteFooter
+          configuredDiscordInviteUrl={process.env.DISCORD_INVITE_URL}
+        />
         <TawkChat />
       </body>
     </html>

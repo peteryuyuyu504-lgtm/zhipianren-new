@@ -864,6 +864,109 @@ a {
   }
 }
 
+/* 全站用户 Footer：沿用登录页的纸张底色、细线和苹果绿强调色。 */
+.site-footer {
+  display: flex;
+  width: min(1180px, calc(100% - 40px));
+  min-height: 78px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 22px;
+  margin: 0 auto;
+  padding: 18px 0 22px;
+  border-top: 1px solid rgba(104, 164, 68, 0.16);
+  color: #6f806b;
+  background: #f6faf2;
+}
+
+.site-footer-copy {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+}
+
+.site-footer-copy span {
+  color: #527a3d;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.site-footer-copy small {
+  color: #879381;
+  font-size: 11px;
+}
+
+.site-footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 9px;
+}
+
+.site-footer-link {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid rgba(104, 164, 68, 0.18);
+  border-radius: 12px;
+  color: #547346;
+  background: rgba(255, 255, 255, 0.48);
+  font-size: 11px;
+  font-weight: 700;
+  transition: border-color 180ms ease, background 180ms ease, color 180ms ease,
+    transform 180ms ease;
+}
+
+.site-footer-link small {
+  color: #81907b;
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.site-footer-link:hover {
+  border-color: rgba(104, 164, 68, 0.4);
+  color: #477331;
+  background: #fff;
+  transform: translateY(-1px);
+}
+
+.site-footer-link:focus-visible {
+  border-radius: 12px;
+  outline: 3px solid rgba(143, 209, 79, 0.3);
+  outline-offset: 3px;
+}
+
+.site-footer-discord-link small {
+  color: #6d9a4b;
+  font-size: 18px;
+  line-height: 1;
+}
+
+@media (max-width: 600px) {
+  .site-footer {
+    width: min(100% - 28px, 520px);
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 14px;
+    padding: 17px 0 20px;
+  }
+
+  .site-footer-links {
+    width: 100%;
+    align-items: stretch;
+    justify-content: flex-start;
+  }
+
+  .site-footer-link {
+    flex: 1 1 210px;
+    justify-content: space-between;
+  }
+}
+
 /* 联系页沿用登录页的纸张底色与苹果绿强调色，保持入口与落地页的视觉连续性。 */
 .login-contact-link {
   display: inline-flex;

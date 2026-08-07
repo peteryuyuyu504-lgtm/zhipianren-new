@@ -10,6 +10,27 @@ import { prepareTextForSpeech } from "@/lib/voice-text";
 
 const MAX_TTS_TEXT_LENGTH = 500;
 
+function getDatabaseErrorCode(error: unknown) {
+  let current: unknown = error;
+
+  for (let depth = 0; depth < 3; depth += 1) {
+    if (!current || typeof current !== "object") {
+      return "UNKNOWN";
+    }
+
+    if (
+      "code" in current &&
+      typeof (current as { code?: unknown }).code === "string"
+    ) {
+      return (current as { code: string }).code;
+    }
+
+    current = "cause" in current ? current.cause : undefined;
+  }
+
+  return "UNKNOWN";
+}
+
 export async function POST(request: Request) {
   let body: { text?: unknown; characterId?: unknown };
 
@@ -60,10 +81,11 @@ export async function POST(request: Request) {
   try {
     quota = await consumeDailyTtsQuota(userId);
   } catch (error) {
-    console.error(
-      "[TTS] Daily quota request failed:",
-      error instanceof Error ? error.message : "Unknown database error",
-    );
+    console.error("[TTS] Daily quota request failed:", {
+      code: getDatabaseErrorCode(error),
+      message:
+        error instanceof Error ? error.message : "Unknown database error",
+    });
     return NextResponse.json(
       { error: "语音服务暂时不可用，请稍后重试。" },
       { status: 503 },

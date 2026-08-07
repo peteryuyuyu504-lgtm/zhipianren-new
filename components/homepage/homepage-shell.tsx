@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { HomepageHero } from "./homepage-hero";
-import { HomepageExperience } from "./homepage-experience";
+import { HomepageCapabilities } from "./homepage-capabilities";
 import { HomepageCharacterEntry } from "./homepage-character-entry";
-import { HomepageFeatures } from "./homepage-features";
+import { HomepageGettingStarted } from "./homepage-getting-started";
+import { HomepageRelationshipGrowth } from "./homepage-relationship-growth";
+import { HomepageVisualMoment } from "./homepage-visual-moment";
 import styles from "./homepage.module.css";
 
 export function HomepageShell() {
@@ -20,9 +22,9 @@ export function HomepageShell() {
         </Link>
 
         <nav className={styles.headerNav} aria-label="首页导航">
-          <a href="#experience">怎么陪伴</a>
+          <a href="#capabilities">核心能力</a>
+          <a href="#relationship">关系成长</a>
           <a href="#characters">选择角色</a>
-          <a href="#features">核心功能</a>
         </nav>
 
         <div className={styles.headerActions}>
@@ -32,9 +34,11 @@ export function HomepageShell() {
       </header>
 
       <HomepageHero />
-      <HomepageExperience />
+      <HomepageCapabilities />
+      <HomepageVisualMoment />
+      <HomepageRelationshipGrowth />
+      <HomepageGettingStarted />
       <HomepageCharacterEntry />
-      <HomepageFeatures />
 
       <section className={styles.finalCta} aria-labelledby="final-cta-title">
         <p className={styles.eyebrow}>A QUIET PLACE TO TALK</p>

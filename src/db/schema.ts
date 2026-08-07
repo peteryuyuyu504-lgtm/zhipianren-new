@@ -147,6 +147,27 @@ export const dailyChatUsage = pgTable(
   ],
 );
 
+export const dailyTtsUsage = pgTable(
+  "daily_tts_usage",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    usageDate: date("usage_date").notNull(),
+    ttsCount: integer("tts_count").notNull().default(0),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("daily_tts_usage_user_date_unique").on(
+      table.userId,
+      table.usageDate,
+    ),
+  ],
+);
+
 export const generatedImages = pgTable(
   "generated_images",
   {

@@ -33,7 +33,7 @@ function getEmailFrom() {
 }
 
 export async function sendWelcomeEmail(
-  userEmail = "peteryuyuyu504@gmail.com",
+  userEmail: string,
   userName = "朋友",
 ) {
   const apiKey = process.env.RESEND_API_KEY?.trim();
@@ -140,7 +140,7 @@ async function generateLoveLetter(userName: string) {
 }
 
 export async function sendDailyLoveLetter(
-  userEmail = "peteryuyuyu504@gmail.com",
+  userEmail: string,
   userName = "朋友",
 ) {
   const resendApiKey = process.env.RESEND_API_KEY?.trim();

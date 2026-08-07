@@ -4,6 +4,8 @@ import {
   getCharacterVoice,
   synthesizeSpeech,
 } from "@/lib/bytedance-tts";
+import { consumeDailyTtsQuota } from "@/lib/tts-quota";
+import { getCurrentUserId } from "@/lib/user-session";
 import { prepareTextForSpeech } from "@/lib/voice-text";
 
 const MAX_TTS_TEXT_LENGTH = 500;
@@ -38,11 +40,46 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "语音文本没有可朗读内容" }, { status: 400 });
   }
 
+  const userId = await getCurrentUserId();
+  if (!userId) {
+    return NextResponse.json(
+      { error: "登录状态已失效，请重新登录。" },
+      { status: 401 },
+    );
+  }
+
   const apiKey = process.env.BYTEDANCE_TTS_API_KEY?.trim();
   if (!apiKey) {
     return NextResponse.json(
       { error: "语音服务尚未配置" },
       { status: 503 },
+    );
+  }
+
+  let quota: Awaited<ReturnType<typeof consumeDailyTtsQuota>>;
+  try {
+    quota = await consumeDailyTtsQuota(userId);
+  } catch (error) {
+    console.error(
+      "[TTS] Daily quota request failed:",
+      error instanceof Error ? error.message : "Unknown database error",
+    );
+    return NextResponse.json(
+      { error: "语音服务暂时不可用，请稍后重试。" },
+      { status: 503 },
+    );
+  }
+
+  if (!quota.allowed) {
+    return NextResponse.json(
+      { error: "今日语音生成次数已用完，请明天再试。" },
+      {
+        status: 429,
+        headers: {
+          "X-RateLimit-Limit": String(quota.limit),
+          "X-RateLimit-Remaining": "0",
+        },
+      },
     );
   }
 
@@ -58,6 +95,10 @@ export async function POST(request: Request) {
         "Content-Type": "audio/mpeg",
         "Cache-Control": "no-store, private",
         "Content-Length": String(audio.byteLength),
+        "X-RateLimit-Limit": String(quota.limit),
+        "X-RateLimit-Remaining": String(
+          Math.max(0, quota.limit - quota.used),
+        ),
       },
     });
   } catch (error) {

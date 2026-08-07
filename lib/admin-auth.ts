@@ -2,7 +2,7 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 
 function configuredAdminEmails() {
-  return (process.env.ADMIN_EMAILS ?? "admin@example.com")
+  return (process.env.ADMIN_EMAILS ?? "")
     .split(",")
     .map((email) => email.trim().toLowerCase())
     .filter(Boolean);
